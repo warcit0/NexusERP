@@ -1,0 +1,13 @@
+C:\Users\warc0\Desktop\NexusERP\src\NexusERP.Domain\obj\Debug\net10.0\NexusERP.Domain.csproj.AssemblyReference.cache
+C:\Users\warc0\Desktop\NexusERP\src\NexusERP.Domain\obj\Debug\net10.0\NexusERP.Domain.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\warc0\Desktop\NexusERP\src\NexusERP.Domain\obj\Debug\net10.0\NexusERP.Domain.AssemblyInfoInputs.cache
+C:\Users\warc0\Desktop\NexusERP\src\NexusERP.Domain\obj\Debug\net10.0\NexusERP.Domain.AssemblyInfo.cs
+C:\Users\warc0\Desktop\NexusERP\src\NexusERP.Domain\obj\Debug\net10.0\NexusERP.Domain.csproj.CoreCompileInputs.cache
+C:\Users\warc0\Desktop\NexusERP\src\NexusERP.Domain\obj\Debug\net10.0\NexusERP.Domain.sourcelink.json
+C:\Users\warc0\Desktop\NexusERP\src\NexusERP.Domain\bin\Debug\net10.0\NexusERP.Domain.deps.json
+C:\Users\warc0\Desktop\NexusERP\src\NexusERP.Domain\bin\Debug\net10.0\NexusERP.Domain.dll
+C:\Users\warc0\Desktop\NexusERP\src\NexusERP.Domain\bin\Debug\net10.0\NexusERP.Domain.pdb
+C:\Users\warc0\Desktop\NexusERP\src\NexusERP.Domain\obj\Debug\net10.0\NexusERP.Domain.dll
+C:\Users\warc0\Desktop\NexusERP\src\NexusERP.Domain\obj\Debug\net10.0\refint\NexusERP.Domain.dll
+C:\Users\warc0\Desktop\NexusERP\src\NexusERP.Domain\obj\Debug\net10.0\NexusERP.Domain.pdb
+C:\Users\warc0\Desktop\NexusERP\src\NexusERP.Domain\obj\Debug\net10.0\ref\NexusERP.Domain.dll

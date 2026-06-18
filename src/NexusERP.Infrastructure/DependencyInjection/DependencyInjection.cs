@@ -1,0 +1,29 @@
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using NexusERP.Application.Common.Interfaces;
+using NexusERP.Infrastructure.Persistence;
+using NexusERP.Infrastructure.Persistence.Interceptors;
+
+namespace NexusERP.Infrastructure.DependencyInjection;
+
+public static class DependencyInjection
+{
+    public static IServiceCollection AddInfrastructureServices(this IServiceCollection services, IConfiguration configuration)
+    {
+        services.AddScoped<AuditableEntitySaveChangesInterceptor>();
+
+        services.AddDbContext<NexusDbContext>((sp, options) =>
+        {
+            options.UseSqlServer(configuration.GetConnectionString("DefaultConnection"),
+                builder => builder.MigrationsAssembly(typeof(NexusDbContext).Assembly.FullName));
+        });
+
+        services.AddScoped<INexusDbContext>(provider => provider.GetRequiredService<NexusDbContext>());
+
+        // Se configurarán ICurrentUserService y ICurrentTenantService en la API (ya que dependen de HttpContext)
+        // services.AddTransient<IDateTime, DateTimeService>(); // TODO: Servicio de fecha
+
+        return services;
+    }
+}

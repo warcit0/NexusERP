@@ -1,0 +1,14 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/NexusERP.API/NexusERP.API.csproj" />
+    <Project Path="src/NexusERP.Application/NexusERP.Application.csproj" />
+    <Project Path="src/NexusERP.Domain/NexusERP.Domain.csproj" />
+    <Project Path="src/NexusERP.Infrastructure/NexusERP.Infrastructure.csproj" />
+    <Project Path="src/NexusERP.WebDashboard/NexusERP.WebDashboard.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/NexusERP.ArchitectureTests/NexusERP.ArchitectureTests.csproj" />
+    <Project Path="tests/NexusERP.IntegrationTests/NexusERP.IntegrationTests.csproj" />
+    <Project Path="tests/NexusERP.UnitTests/NexusERP.UnitTests.csproj" />
+  </Folder>
+</Solution>
