@@ -1,0 +1,32 @@
+name: Deploy to Azure
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '9.0.x' # Or 10.0.x
+        
+    - name: Publish
+      run: dotnet publish src/NexusERP.API/NexusERP.API.csproj -c Release -o ./publish
+      
+    # Azure login is required to run the WebApp deployment if using Azure CLI or Azure WebApp Action with MSI/SPN
+    # - name: Azure Login
+    #   uses: azure/login@v1
+    #   with:
+    #     creds: ${{ secrets.AZURE_CREDENTIALS }}
+    
+    # - name: Deploy to Azure Web App
+    #   uses: azure/webapps-deploy@v2
+    #   with:
+    #     app-name: 'nexuserp-api-dev'
+    #     package: ./publish

@@ -21,6 +21,18 @@ public static class DependencyInjection
 
         services.AddScoped<INexusDbContext>(provider => provider.GetRequiredService<NexusDbContext>());
 
+        services.AddIdentityCore<NexusERP.Infrastructure.Identity.ApplicationUser>(options =>
+        {
+            options.Password.RequireDigit = true;
+            options.Password.RequireLowercase = true;
+            options.Password.RequireNonAlphanumeric = true;
+            options.Password.RequireUppercase = true;
+            options.Password.RequiredLength = 8;
+            options.User.RequireUniqueEmail = true;
+        })
+        .AddRoles<Microsoft.AspNetCore.Identity.IdentityRole>()
+        .AddEntityFrameworkStores<NexusDbContext>();
+
         // Se configurarán ICurrentUserService y ICurrentTenantService en la API (ya que dependen de HttpContext)
         // services.AddTransient<IDateTime, DateTimeService>(); // TODO: Servicio de fecha
 

@@ -1,6 +1,8 @@
 using System.Reflection;
 using FluentValidation;
+using MediatR;
 using Microsoft.Extensions.DependencyInjection;
+using NexusERP.Application.Common.Behaviours;
 
 namespace NexusERP.Application.DependencyInjection;
 
@@ -13,7 +15,9 @@ public static class DependencyInjection
 
         services.AddMediatR(cfg => {
             cfg.RegisterServicesFromAssembly(Assembly.GetExecutingAssembly());
-            // Aquí agregaremos Behaviors (Validation, Performance, Logging) en el futuro
+            cfg.AddBehavior(typeof(IPipelineBehavior<,>), typeof(UnhandledExceptionBehaviour<,>));
+            cfg.AddBehavior(typeof(IPipelineBehavior<,>), typeof(ValidationBehaviour<,>));
+            cfg.AddBehavior(typeof(IPipelineBehavior<,>), typeof(PerformanceBehaviour<,>));
         });
 
         return services;

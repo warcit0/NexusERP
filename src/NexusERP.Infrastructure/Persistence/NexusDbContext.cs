@@ -4,9 +4,12 @@ using NexusERP.Application.Common.Interfaces;
 using NexusERP.Domain.Entities;
 using NexusERP.Infrastructure.Persistence.Interceptors;
 
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using NexusERP.Infrastructure.Identity;
+
 namespace NexusERP.Infrastructure.Persistence;
 
-public class NexusDbContext : DbContext, INexusDbContext
+public class NexusDbContext : IdentityDbContext<ApplicationUser>, INexusDbContext
 {
     private readonly IMediator _mediator;
     private readonly AuditableEntitySaveChangesInterceptor _auditableEntitySaveChangesInterceptor;
@@ -28,8 +31,10 @@ public class NexusDbContext : DbContext, INexusDbContext
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
-        builder.ApplyConfigurationsFromAssembly(typeof(NexusDbContext).Assembly);
         base.OnModelCreating(builder);
+        builder.HasDefaultSchema("platform");
+
+        builder.ApplyConfigurationsFromAssembly(typeof(NexusDbContext).Assembly);
     }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
