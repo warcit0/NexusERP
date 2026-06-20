@@ -1,16 +1,71 @@
-﻿@inherits LayoutComponentBase
-<div class="page">
-    <div class="sidebar">
+@inherits LayoutComponentBase
+@using NexusERP.WebDashboard.Auth
+@inject AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager Navigation
+
+<MudThemeProvider Theme="_currentTheme" />
+<MudDialogProvider />
+<MudSnackbarProvider />
+<MudPopoverProvider />
+
+<MudLayout>
+    <MudAppBar Elevation="1" Color="Color.Primary">
+        <MudIconButton Icon="@Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="@((e) => DrawerToggle())" />
+        <MudText Typo="Typo.h5" Class="ml-3 font-weight-bold">NexusERP</MudText>
+        <MudSpacer />
+        
+        <MudTooltip Text="Notificaciones">
+            <MudIconButton Icon="@Icons.Material.Filled.Notifications" Color="Color.Inherit" />
+        </MudTooltip>
+        <MudMenu AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight">
+            <ActivatorContent>
+                <MudAvatar Color="Color.Secondary" Class="ml-4 cursor-pointer">
+                    <MudIcon Icon="@Icons.Material.Filled.Person" />
+                </MudAvatar>
+            </ActivatorContent>
+            <ChildContent>
+                <MudMenuItem>Perfil</MudMenuItem>
+                <MudMenuItem>Configuración</MudMenuItem>
+                <MudDivider />
+                <MudMenuItem OnClick="Logout">Cerrar Sesión</MudMenuItem>
+            </ChildContent>
+        </MudMenu>
+    </MudAppBar>
+    <MudDrawer @bind-Open="_drawerOpen" Elevation="2" ClipMode="DrawerClipMode.Always">
         <NavMenu />
-    </div>
-
-    <main>
-        <div class="top-row px-4">
-            <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
-        </div>
-
-        <article class="content px-4">
+    </MudDrawer>
+    <MudMainContent Class="pt-16 px-4">
+        <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-6">
             @Body
-        </article>
-    </main>
-</div>
+        </MudContainer>
+    </MudMainContent>
+</MudLayout>
+
+@code {
+    bool _drawerOpen = true;
+
+    void DrawerToggle()
+    {
+        _drawerOpen = !_drawerOpen;
+    }
+
+    private MudTheme _currentTheme = new MudTheme()
+    {
+        PaletteLight = new PaletteLight()
+        {
+            Primary = "#0f172a",       // slate-900
+            Secondary = "#3b82f6",     // blue-500
+            AppbarBackground = "#0f172a",
+            Background = "#f8fafc",    // slate-50
+            DrawerBackground = "#ffffff",
+            TextPrimary = "#334155",   // slate-700
+        }
+    };
+
+    private async Task Logout()
+    {
+        var authProvider = (CustomAuthStateProvider)AuthStateProvider;
+        await authProvider.NotifyUserLoggedOut();
+        Navigation.NavigateTo("/login");
+    }
+}
