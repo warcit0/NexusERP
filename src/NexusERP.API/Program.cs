@@ -31,6 +31,9 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 builder.Services.AddScoped<ICurrentTenantService, CurrentTenantService>();
 
+// Add Caching (Using Distributed Memory Cache temporarily instead of Redis for local dev)
+builder.Services.AddDistributedMemoryCache();
+
 builder.Services.AddControllers();
 // OpenAPI / Swagger Configuration
 builder.Services.AddOpenApi();

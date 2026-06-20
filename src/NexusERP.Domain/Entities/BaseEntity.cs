@@ -12,6 +12,7 @@ public abstract class BaseEntity
 
     private readonly List<BaseEvent> _domainEvents = [];
 
+    [System.ComponentModel.DataAnnotations.Schema.NotMapped]
     public IReadOnlyCollection<BaseEvent> DomainEvents => _domainEvents.AsReadOnly();
 
     public void AddDomainEvent(BaseEvent domainEvent)

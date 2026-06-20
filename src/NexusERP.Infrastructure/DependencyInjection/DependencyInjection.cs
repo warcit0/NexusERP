@@ -21,7 +21,7 @@ public static class DependencyInjection
 
         services.AddScoped<INexusDbContext>(provider => provider.GetRequiredService<NexusDbContext>());
 
-        services.AddIdentityCore<NexusERP.Infrastructure.Identity.ApplicationUser>(options =>
+        services.AddIdentity<NexusERP.Infrastructure.Identity.ApplicationUser, Microsoft.AspNetCore.Identity.IdentityRole>(options =>
         {
             options.Password.RequireDigit = true;
             options.Password.RequireLowercase = true;
@@ -30,8 +30,34 @@ public static class DependencyInjection
             options.Password.RequiredLength = 8;
             options.User.RequireUniqueEmail = true;
         })
-        .AddRoles<Microsoft.AspNetCore.Identity.IdentityRole>()
         .AddEntityFrameworkStores<NexusDbContext>();
+
+        services.Configure<NexusERP.Infrastructure.Identity.JwtSettings>(configuration.GetSection(NexusERP.Infrastructure.Identity.JwtSettings.SectionName));
+        services.AddScoped<ITokenService, NexusERP.Infrastructure.Identity.TokenService>();
+        services.AddScoped<IIdentityService, NexusERP.Infrastructure.Identity.IdentityService>();
+
+        var jwtSettings = new NexusERP.Infrastructure.Identity.JwtSettings();
+        configuration.Bind(NexusERP.Infrastructure.Identity.JwtSettings.SectionName, jwtSettings);
+
+        services.AddAuthentication(options =>
+        {
+            options.DefaultAuthenticateScheme = Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerDefaults.AuthenticationScheme;
+            options.DefaultChallengeScheme = Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerDefaults.AuthenticationScheme;
+        })
+        .AddJwtBearer(options =>
+        {
+            options.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters
+            {
+                ValidateIssuer = true,
+                ValidateAudience = true,
+                ValidateLifetime = true,
+                ValidateIssuerSigningKey = true,
+                ValidIssuer = jwtSettings.Issuer,
+                ValidAudience = jwtSettings.Audience,
+                IssuerSigningKey = new Microsoft.IdentityModel.Tokens.SymmetricSecurityKey(
+                    System.Text.Encoding.UTF8.GetBytes(jwtSettings.Secret))
+            };
+        });
 
         // Se configurarán ICurrentUserService y ICurrentTenantService en la API (ya que dependen de HttpContext)
         // services.AddTransient<IDateTime, DateTimeService>(); // TODO: Servicio de fecha

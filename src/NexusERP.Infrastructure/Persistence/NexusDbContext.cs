@@ -15,6 +15,13 @@ public class NexusDbContext : IdentityDbContext<ApplicationUser>, INexusDbContex
     private readonly AuditableEntitySaveChangesInterceptor _auditableEntitySaveChangesInterceptor;
     private readonly ICurrentTenantService _currentTenantService;
 
+    public DbSet<Tenant> Tenants => Set<Tenant>();
+    public DbSet<SubscriptionPlan> SubscriptionPlans => Set<SubscriptionPlan>();
+    public DbSet<License> Licenses => Set<License>();
+    public DbSet<Branch> Branches => Set<Branch>();
+    public DbSet<CashRegister> CashRegisters => Set<CashRegister>();
+    public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
+
     public NexusDbContext(
         DbContextOptions<NexusDbContext> options,
         IMediator mediator,
@@ -33,6 +40,14 @@ public class NexusDbContext : IdentityDbContext<ApplicationUser>, INexusDbContex
     {
         base.OnModelCreating(builder);
         builder.HasDefaultSchema("platform");
+
+        // Configuración de schemas y filtros
+        builder.Entity<Branch>().ToTable("Branches", "tenant");
+        builder.Entity<CashRegister>().ToTable("CashRegisters", "tenant");
+        
+        // Filtro global para aislamiento de Tenants
+        builder.Entity<Branch>().HasQueryFilter(e => e.TenantId == _currentTenantService.TenantId);
+        builder.Entity<CashRegister>().HasQueryFilter(e => e.TenantId == _currentTenantService.TenantId);
 
         builder.ApplyConfigurationsFromAssembly(typeof(NexusDbContext).Assembly);
     }

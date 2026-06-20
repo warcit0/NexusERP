@@ -25,10 +25,9 @@ resource sqlDB 'Microsoft.Sql/servers/databases@2022-05-01-preview' = {
   name: 'NexusERP'
   location: location
   sku: {
-    name: 'GP_S_Gen5_1'
-    tier: 'GeneralPurpose'
-    family: 'Gen5'
-    capacity: 1
+    name: 'Basic'
+    tier: 'Basic'
+    capacity: 5 // 5 DTUs
   }
 }
 
@@ -37,8 +36,8 @@ resource appServicePlan 'Microsoft.Web/serverfarms@2022-03-01' = {
   name: '${uniqueName}-plan'
   location: location
   sku: {
-    name: 'B1'
-    tier: 'Basic'
+    name: 'F1'
+    tier: 'Free'
   }
 }
 
