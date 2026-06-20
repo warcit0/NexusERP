@@ -90,4 +90,36 @@ public class IdentityService : IIdentityService
         var result = await _userManager.AddToRoleAsync(user, roleName);
         return result.Succeeded;
     }
+
+    public async Task<AuthResponse?> RefreshTokenAsync(string accessToken, string refreshToken)
+    {
+        var principal = _tokenService.GetPrincipalFromExpiredToken(accessToken);
+        var email = principal.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Email)?.Value;
+
+        if (email == null) return null;
+
+        var user = await _userManager.FindByEmailAsync(email);
+
+        if (user == null || user.RefreshToken != refreshToken || user.RefreshTokenExpiryTime <= DateTime.UtcNow)
+        {
+            return null;
+        }
+
+        var newAccessToken = _tokenService.GenerateAccessToken(principal.Claims);
+        var newRefreshToken = _tokenService.GenerateRefreshToken();
+
+        user.RefreshToken = newRefreshToken;
+        user.RefreshTokenExpiryTime = DateTime.UtcNow.AddDays(7); // Preferible leer de JwtSettings
+        await _userManager.UpdateAsync(user);
+
+        return new AuthResponse
+        {
+            AccessToken = newAccessToken,
+            RefreshToken = newRefreshToken,
+            Email = user.Email!,
+            UserId = user.Id,
+            TenantId = user.TenantId,
+            Roles = (await _userManager.GetRolesAsync(user)).ToList()
+        };
+    }
 }

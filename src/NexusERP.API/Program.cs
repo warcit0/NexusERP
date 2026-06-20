@@ -4,6 +4,8 @@ using NexusERP.Infrastructure.DependencyInjection;
 using NexusERP.API.Services;
 using Scalar.AspNetCore;
 using Serilog;
+using Microsoft.AspNetCore.RateLimiting;
+using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -33,6 +35,19 @@ builder.Services.AddScoped<ICurrentTenantService, CurrentTenantService>();
 
 // Add Caching (Using Distributed Memory Cache temporarily instead of Redis for local dev)
 builder.Services.AddDistributedMemoryCache();
+
+// Add Rate Limiting
+builder.Services.AddRateLimiter(options =>
+{
+    options.AddFixedWindowLimiter("Auth", limiterOptions =>
+    {
+        limiterOptions.PermitLimit = 5;
+        limiterOptions.Window = TimeSpan.FromMinutes(1);
+        limiterOptions.QueueProcessingOrder = System.Threading.RateLimiting.QueueProcessingOrder.OldestFirst;
+        limiterOptions.QueueLimit = 0;
+    });
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+});
 
 builder.Services.AddControllers();
 // OpenAPI / Swagger Configuration
@@ -84,6 +99,7 @@ app.UseAuthentication();
 app.UseMiddleware<NexusERP.API.Middlewares.TenantMiddleware>();
 
 app.UseAuthorization();
+app.UseRateLimiter();
 
 app.MapControllers();
 

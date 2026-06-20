@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using NexusERP.Application.Common.Interfaces;
 using NexusERP.Infrastructure.Persistence;
 using NexusERP.Infrastructure.Persistence.Interceptors;
+using Microsoft.Extensions.Caching.Distributed;
 
 namespace NexusERP.Infrastructure.DependencyInjection;
 
@@ -56,6 +57,21 @@ public static class DependencyInjection
                 ValidAudience = jwtSettings.Audience,
                 IssuerSigningKey = new Microsoft.IdentityModel.Tokens.SymmetricSecurityKey(
                     System.Text.Encoding.UTF8.GetBytes(jwtSettings.Secret))
+            };
+
+            options.Events = new Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerEvents
+            {
+                OnTokenValidated = async context =>
+                {
+                    var cache = context.HttpContext.RequestServices.GetRequiredService<Microsoft.Extensions.Caching.Distributed.IDistributedCache>();
+                    var token = context.Request.Headers.Authorization.ToString().Replace("Bearer ", "");
+                    
+                    var isRevoked = await cache.GetStringAsync($"blacklist:{token}");
+                    if (!string.IsNullOrEmpty(isRevoked))
+                    {
+                        context.Fail("Token has been revoked");
+                    }
+                }
             };
         });
 
