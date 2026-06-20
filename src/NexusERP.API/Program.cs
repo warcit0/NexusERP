@@ -49,6 +49,14 @@ builder.Services.AddRateLimiter(options =>
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
 });
 
+// Add API Versioning
+builder.Services.AddApiVersioning(options =>
+{
+    options.DefaultApiVersion = new Asp.Versioning.ApiVersion(1, 0);
+    options.AssumeDefaultVersionWhenUnspecified = true;
+    options.ReportApiVersions = true; // Agrega headers: api-supported-versions, api-deprecated-versions
+}).AddMvc();
+
 builder.Services.AddControllers();
 // OpenAPI / Swagger Configuration
 builder.Services.AddOpenApi();

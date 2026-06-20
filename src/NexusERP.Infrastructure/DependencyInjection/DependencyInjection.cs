@@ -5,6 +5,7 @@ using NexusERP.Application.Common.Interfaces;
 using NexusERP.Infrastructure.Persistence;
 using NexusERP.Infrastructure.Persistence.Interceptors;
 using Microsoft.Extensions.Caching.Distributed;
+using NexusERP.Infrastructure.Settings;
 
 namespace NexusERP.Infrastructure.DependencyInjection;
 
@@ -36,6 +37,7 @@ public static class DependencyInjection
         services.Configure<NexusERP.Infrastructure.Identity.JwtSettings>(configuration.GetSection(NexusERP.Infrastructure.Identity.JwtSettings.SectionName));
         services.AddScoped<ITokenService, NexusERP.Infrastructure.Identity.TokenService>();
         services.AddScoped<IIdentityService, NexusERP.Infrastructure.Identity.IdentityService>();
+        services.AddSingleton<ILicenseSettings>(_ => LicenseSettings.FromConfiguration(configuration));
 
         var jwtSettings = new NexusERP.Infrastructure.Identity.JwtSettings();
         configuration.Bind(NexusERP.Infrastructure.Identity.JwtSettings.SectionName, jwtSettings);
@@ -77,6 +79,9 @@ public static class DependencyInjection
 
         // Se configurarán ICurrentUserService y ICurrentTenantService en la API (ya que dependen de HttpContext)
         // services.AddTransient<IDateTime, DateTimeService>(); // TODO: Servicio de fecha
+
+        // Background Services
+        services.AddHostedService<NexusERP.Infrastructure.BackgroundServices.TenantSuspensionBackgroundService>();
 
         return services;
     }

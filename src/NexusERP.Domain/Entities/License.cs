@@ -6,8 +6,8 @@ public class License : BaseEntity
     public Tenant? Tenant { get; set; }
     
     public string LicenseKey { get; set; } = string.Empty; // Hash de la licencia
-    public DateTime ValidFrom { get; set; }
-    public DateTime ValidTo { get; set; }
+    public DateTime StartDate { get; set; }
+    public DateTime EndDate { get; set; }
     public bool IsActive { get; set; }
     
     public Guid SubscriptionPlanId { get; set; }
