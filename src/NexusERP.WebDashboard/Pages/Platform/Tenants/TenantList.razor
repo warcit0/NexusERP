@@ -1,0 +1,107 @@
+@page "/platform/tenants"
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize(Roles = "SuperAdmin")]
+@using System.Net.Http.Json
+@inject HttpClient Http
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+
+<PageTitle>NexusERP | Empresas (Tenants)</PageTitle>
+
+<div class="d-flex justify-space-between align-center mb-4">
+    <MudText Typo="Typo.h5">Gestión de Empresas (Tenants)</MudText>
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="OpenCreateDialog">
+        Nueva Empresa
+    </MudButton>
+</div>
+
+<MudTable Items="@tenants" Hover="true" Loading="@loading" Striped="true" Elevation="1">
+    <HeaderContent>
+        <MudTh>ID</MudTh>
+        <MudTh>Nombre</MudTh>
+        <MudTh>Subdominio</MudTh>
+        <MudTh>Base de Datos</MudTh>
+        <MudTh>Estado</MudTh>
+        <MudTh>Acciones</MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd DataLabel="ID">@context.Id</MudTd>
+        <MudTd DataLabel="Nombre">@context.Name</MudTd>
+        <MudTd DataLabel="Subdominio">
+            <MudChip T="string" Color="Color.Info" Size="Size.Small">@context.Subdomain</MudChip>
+        </MudTd>
+        <MudTd DataLabel="Base de Datos">@context.DatabaseConnectionString</MudTd>
+        <MudTd DataLabel="Estado">
+            @if(context.IsActive)
+            {
+                <MudChip T="string" Color="Color.Success" Size="Size.Small">Activo</MudChip>
+            }
+            else
+            {
+                <MudChip T="string" Color="Color.Error" Size="Size.Small">Inactivo</MudChip>
+            }
+        </MudTd>
+        <MudTd DataLabel="Acciones">
+            <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" Size="Size.Small" />
+            <MudIconButton Icon="@Icons.Material.Filled.Key" Color="Color.Secondary" Size="Size.Small" Title="Licencias" />
+        </MudTd>
+    </RowTemplate>
+    <PagerContent>
+        <MudTablePager />
+    </PagerContent>
+</MudTable>
+
+@code {
+    private bool loading = true;
+    private List<TenantDto> tenants = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadTenants();
+    }
+
+    private async Task LoadTenants()
+    {
+        loading = true;
+        try
+        {
+            // Simulate API call for now or call real endpoint if exists
+            var response = await Http.GetFromJsonAsync<List<TenantDto>>("api/v1/platform/tenants");
+            if (response != null)
+            {
+                tenants = response;
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add("Error al cargar tenants: " + ex.Message, Severity.Error);
+        }
+        finally
+        {
+            loading = false;
+        }
+    }
+
+    private async Task OpenCreateDialog()
+    {
+        var parameters = new DialogParameters();
+        var options = new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Small, FullWidth = true };
+        
+        var dialog = await DialogService.ShowAsync<TenantCreateDialog>("Crear Nueva Empresa", parameters, options);
+        var result = await dialog.Result;
+
+        if (result != null && !result.Canceled)
+        {
+            await LoadTenants();
+        }
+    }
+
+    public class TenantDto
+    {
+        public Guid Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string Subdomain { get; set; } = string.Empty;
+        public string DatabaseConnectionString { get; set; } = string.Empty;
+        public bool IsActive { get; set; }
+    }
+}

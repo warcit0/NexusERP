@@ -1,0 +1,87 @@
+@using Microsoft.AspNetCore.Authorization
+@using System.Net.Http.Json
+@inject HttpClient Http
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <DialogContent>
+        <MudForm @ref="form" @bind-IsValid="@success">
+            <MudTextField T="string" @bind-Value="model.Email" Label="Correo del Usuario" 
+                          Required="true" RequiredError="El correo es requerido" InputType="InputType.Email" Class="mb-3"/>
+                          
+            <MudTextField T="string" @bind-Value="model.Password" Label="Contraseña Temporal" 
+                          Required="true" RequiredError="La contraseña es requerida" InputType="InputType.Password" Class="mb-3"/>
+                          
+            <MudSelect T="string" @bind-Value="model.Role" Label="Rol del Usuario" Required="true" RequiredError="Seleccione un rol">
+                <MudSelectItem Value="@("TenantAdmin")">Administrador del Tenant</MudSelectItem>
+                <MudSelectItem Value="@("Manager")">Gerente</MudSelectItem>
+                <MudSelectItem Value="@("Cashier")">Cajero</MudSelectItem>
+                <MudSelectItem Value="@("InventoryClerk")">Encargado de Inventario</MudSelectItem>
+            </MudSelect>
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancelar</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Submit" Disabled="@loading">
+            @if(loading)
+            {
+                <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true"/>
+            }
+            else
+            {
+                <MudText>Crear</MudText>
+            }
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = null!;
+    
+    private MudForm form = null!;
+    private bool success;
+    private bool loading = false;
+    private CreateUserCommand model = new();
+
+    private void Cancel()
+    {
+        MudDialog.Cancel();
+    }
+
+    private async Task Submit()
+    {
+        await form.Validate();
+        if (form.IsValid)
+        {
+            loading = true;
+            try
+            {
+                var response = await Http.PostAsJsonAsync("api/v1/users", model);
+                if (response.IsSuccessStatusCode)
+                {
+                    Snackbar.Add("Usuario creado exitosamente", Severity.Success);
+                    MudDialog.Close(DialogResult.Ok(true));
+                }
+                else
+                {
+                    Snackbar.Add("Error al crear el usuario. Verifique los datos.", Severity.Error);
+                }
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add("Error de conexión: " + ex.Message, Severity.Error);
+            }
+            finally
+            {
+                loading = false;
+            }
+        }
+    }
+
+    public class CreateUserCommand
+    {
+        public string Email { get; set; } = string.Empty;
+        public string Password { get; set; } = string.Empty;
+        public string Role { get; set; } = string.Empty;
+    }
+}

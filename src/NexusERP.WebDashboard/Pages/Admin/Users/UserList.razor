@@ -1,0 +1,96 @@
+@page "/admin/users"
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize(Roles = "TenantAdmin,SuperAdmin")]
+@using System.Net.Http.Json
+@inject HttpClient Http
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+
+<PageTitle>NexusERP | Gestión de Usuarios</PageTitle>
+
+<div class="d-flex justify-space-between align-center mb-4">
+    <MudText Typo="Typo.h5">Gestión de Usuarios del Tenant</MudText>
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.PersonAdd" OnClick="OpenCreateDialog">
+        Nuevo Usuario
+    </MudButton>
+</div>
+
+<MudTable Items="@users" Hover="true" Loading="@loading" Striped="true" Elevation="1">
+    <HeaderContent>
+        <MudTh>ID</MudTh>
+        <MudTh>Email</MudTh>
+        <MudTh>Roles</MudTh>
+        <MudTh>Acciones</MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd DataLabel="ID">@context.Id</MudTd>
+        <MudTd DataLabel="Email">@context.Email</MudTd>
+        <MudTd DataLabel="Roles">
+            @foreach (var role in context.Roles)
+            {
+                <MudChip T="string" Color="Color.Info" Size="Size.Small" Class="mr-1">@role</MudChip>
+            }
+        </MudTd>
+        <MudTd DataLabel="Acciones">
+            <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" Size="Size.Small" />
+            <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small" />
+        </MudTd>
+    </RowTemplate>
+    <PagerContent>
+        <MudTablePager />
+    </PagerContent>
+</MudTable>
+
+@code {
+    private bool loading = true;
+    private List<UserDto> users = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadUsers();
+    }
+
+    private async Task LoadUsers()
+    {
+        loading = true;
+        try
+        {
+            // Simulate API call for now or call real endpoint if exists
+            // Should fetch users for the current tenant
+            var response = await Http.GetFromJsonAsync<List<UserDto>>("api/v1/users");
+            if (response != null)
+            {
+                users = response;
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add("Error al cargar usuarios: " + ex.Message, Severity.Error);
+        }
+        finally
+        {
+            loading = false;
+        }
+    }
+
+    private async Task OpenCreateDialog()
+    {
+        var parameters = new DialogParameters();
+        var options = new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Small, FullWidth = true };
+        
+        var dialog = await DialogService.ShowAsync<UserCreateDialog>("Crear Nuevo Usuario", parameters, options);
+        var result = await dialog.Result;
+
+        if (result != null && !result.Canceled)
+        {
+            await LoadUsers();
+        }
+    }
+
+    public class UserDto
+    {
+        public string Id { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public List<string> Roles { get; set; } = new();
+    }
+}
