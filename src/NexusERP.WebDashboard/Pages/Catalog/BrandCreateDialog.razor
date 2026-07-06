@@ -1,0 +1,45 @@
+@using System.Net.Http.Json
+@inject HttpClient Http
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <DialogContent>
+        <MudForm @ref="form">
+            <MudTextField T="string" @bind-Value="model.Name" Label="Nombre de Marca"
+                          Required="true" RequiredError="El nombre es requerido" Class="mb-3" />
+            <MudTextField T="string" @bind-Value="model.Description" Label="Descripción" Lines="3" Class="mb-3" />
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancelar</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Submit" Disabled="@loading">
+            @if (loading) { <MudProgressCircular Size="Size.Small" Indeterminate="true" /> } else { <MudText>Crear</MudText> }
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = null!;
+    private MudForm form = null!;
+    private bool loading;
+    private CreateBrandModel model = new();
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private async Task Submit()
+    {
+        await form.ValidateAsync();
+        if (!form.IsValid) return;
+        loading = true;
+        try
+        {
+            var response = await Http.PostAsJsonAsync("api/v1/catalog/brands", model);
+            if (response.IsSuccessStatusCode) { Snackbar.Add("Marca creada", Severity.Success); MudDialog.Close(DialogResult.Ok(true)); }
+            else Snackbar.Add($"Error: {await response.Content.ReadAsStringAsync()}", Severity.Error);
+        }
+        catch { Snackbar.Add("Error de conexión", Severity.Error); }
+        finally { loading = false; }
+    }
+
+    public class CreateBrandModel { public string Name { get; set; } = string.Empty; public string Description { get; set; } = string.Empty; }
+}

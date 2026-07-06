@@ -16,7 +16,13 @@
                           Required="true" RequiredError="El correo es requerido" InputType="InputType.Email" Class="mb-3"/>
                           
             <MudTextField T="string" @bind-Value="model.AdminPassword" Label="Contraseña Temporal" 
-                          Required="true" RequiredError="La contraseña es requerida" InputType="InputType.Password" Class="mb-3"/>
+                          Required="true" RequiredError="La contraseña es requerida" InputType="InputType.Password" Class="mb-3"
+                          HelperText="Mínimo 8 caracteres, una mayúscula y un número"/>
+
+            <MudSelect T="string" @bind-Value="model.PlanCode" Label="Plan de Suscripción" Class="mb-3">
+                <MudSelectItem Value="@("Basic")">Basic – hasta 5 usuarios</MudSelectItem>
+                <MudSelectItem Value="@("Pro")">Pro – hasta 20 usuarios</MudSelectItem>
+            </MudSelect>
         </MudForm>
     </DialogContent>
     <DialogActions>
@@ -40,7 +46,7 @@
     private MudForm form = null!;
     private bool success;
     private bool loading = false;
-    private CreateTenantCommand model = new();
+    private CreateTenantModel model = new();
 
     private void Cancel()
     {
@@ -49,13 +55,22 @@
 
     private async Task Submit()
     {
-        await form.Validate();
+        await form.ValidateAsync();
         if (form.IsValid)
         {
             loading = true;
             try
             {
-                var response = await Http.PostAsJsonAsync("api/v1/platform/tenants", model);
+                var payload = new
+                {
+                    model.Name,
+                    model.Subdomain,
+                    model.AdminEmail,
+                    model.AdminPassword,
+                    PlanCode = string.IsNullOrEmpty(model.PlanCode) ? "Basic" : model.PlanCode
+                };
+
+                var response = await Http.PostAsJsonAsync("api/v1/platform/tenants", payload);
                 if (response.IsSuccessStatusCode)
                 {
                     Snackbar.Add("Empresa creada exitosamente", Severity.Success);
@@ -63,7 +78,8 @@
                 }
                 else
                 {
-                    Snackbar.Add("Error al crear la empresa. Verifique los datos.", Severity.Error);
+                    var errorContent = await response.Content.ReadAsStringAsync();
+                    Snackbar.Add($"Error al crear la empresa: {errorContent}", Severity.Error);
                 }
             }
             catch (Exception ex)
@@ -77,11 +93,12 @@
         }
     }
 
-    public class CreateTenantCommand
+    public class CreateTenantModel
     {
         public string Name { get; set; } = string.Empty;
         public string Subdomain { get; set; } = string.Empty;
         public string AdminEmail { get; set; } = string.Empty;
         public string AdminPassword { get; set; } = string.Empty;
+        public string PlanCode { get; set; } = "Basic";
     }
 }

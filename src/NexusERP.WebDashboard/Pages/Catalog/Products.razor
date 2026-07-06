@@ -1,0 +1,100 @@
+@page "/catalog/products"
+@using Microsoft.AspNetCore.Authorization
+@using System.Net.Http.Json
+@inject HttpClient Http
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+@attribute [Authorize]
+
+<MudText Typo="Typo.h5" Class="mb-4">Productos</MudText>
+
+<MudPaper Class="pa-4">
+    <MudToolBar>
+        <MudSpacer />
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="OpenCreateDialog">Nuevo Producto</MudButton>
+    </MudToolBar>
+
+    <MudTable Items="@products" Loading="@loading" Hover="true" Striped="true" Dense="true">
+        <HeaderContent>
+            <MudTh>Nombre</MudTh>
+            <MudTh>Categoría</MudTh>
+            <MudTh>Marca</MudTh>
+            <MudTh>Impuesto</MudTh>
+            <MudTh>Variantes</MudTh>
+            <MudTh>Estado</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Nombre">
+                <MudText Typo="Typo.body2"><b>@context.Name</b></MudText>
+                <MudText Typo="Typo.caption" Class="mud-text-secondary">@context.MeasurementUnit</MudText>
+            </MudTd>
+            <MudTd DataLabel="Categoría">@context.CategoryName</MudTd>
+            <MudTd DataLabel="Marca">@(context.BrandName ?? "-")</MudTd>
+            <MudTd DataLabel="Impuesto">@(context.TaxName ?? "-")</MudTd>
+            <MudTd DataLabel="Variantes">
+                <MudChip T="string" Size="Size.Small" Color="Color.Info">@context.Variants.Count variante(s)</MudChip>
+            </MudTd>
+            <MudTd DataLabel="Estado">
+                <MudChip T="string" Size="Size.Small" Color="@(context.IsActive ? Color.Success : Color.Error)">
+                    @(context.IsActive ? "Activo" : "Inactivo")
+                </MudChip>
+            </MudTd>
+        </RowTemplate>
+        <ChildRowContent>
+            @if (context.Variants.Any())
+            {
+                <MudTr>
+                    <td colspan="6" class="px-8 py-2">
+                        <MudTable Items="@context.Variants" Dense="true" Elevation="0" Class="mud-background-gray">
+                            <HeaderContent>
+                                <MudTh>SKU</MudTh>
+                                <MudTh>Código Barras</MudTh>
+                                <MudTh>Talla</MudTh>
+                                <MudTh>Color</MudTh>
+                                <MudTh>Costo</MudTh>
+                                <MudTh>Precio</MudTh>
+                            </HeaderContent>
+                            <RowTemplate Context="variant">
+                                <MudTd>@variant.Sku</MudTd>
+                                <MudTd>@variant.Barcode</MudTd>
+                                <MudTd>@variant.Size</MudTd>
+                                <MudTd>@variant.Color</MudTd>
+                                <MudTd>₡@variant.Cost.ToString("N2")</MudTd>
+                                <MudTd>₡@variant.Price.ToString("N2")</MudTd>
+                            </RowTemplate>
+                        </MudTable>
+                    </td>
+                </MudTr>
+            }
+        </ChildRowContent>
+        <NoRecordsContent>
+            <MudText>No hay productos registrados.</MudText>
+        </NoRecordsContent>
+    </MudTable>
+</MudPaper>
+
+@code {
+    private List<ProductDto> products = new();
+    private bool loading = true;
+
+    protected override async Task OnInitializedAsync() => await LoadProducts();
+
+    private async Task LoadProducts()
+    {
+        loading = true; StateHasChanged();
+        try { products = await Http.GetFromJsonAsync<List<ProductDto>>("api/v1/catalog/products") ?? new(); }
+        catch { Snackbar.Add("Error al cargar productos", Severity.Error); }
+        finally { loading = false; StateHasChanged(); }
+    }
+
+    private async Task OpenCreateDialog()
+    {
+        var options = new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Large, FullWidth = true };
+        var dialog = await DialogService.ShowAsync<ProductCreateDialog>("Nuevo Producto", options);
+        var result = await dialog.Result;
+        if (!result.Canceled) await LoadProducts();
+    }
+
+    public class ProductVariantDto { public Guid Id { get; set; } public string Sku { get; set; } = ""; public string Barcode { get; set; } = ""; public string Size { get; set; } = ""; public string Color { get; set; } = ""; public decimal Cost { get; set; } public decimal Price { get; set; } }
+    public class ProductDto { public Guid Id { get; set; } public string Name { get; set; } = ""; public string Description { get; set; } = ""; public string CategoryName { get; set; } = ""; public string? BrandName { get; set; } public string? TaxName { get; set; } public string CabysCode { get; set; } = ""; public string MeasurementUnit { get; set; } = ""; public bool IsActive { get; set; } public List<ProductVariantDto> Variants { get; set; } = new(); }
+}

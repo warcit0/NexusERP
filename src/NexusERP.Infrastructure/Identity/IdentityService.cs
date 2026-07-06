@@ -79,7 +79,14 @@ public class IdentityService : IIdentityService
         };
 
         var result = await _userManager.CreateAsync(user, password);
-        return result.Succeeded ? user.Id : null;
+        
+        if (!result.Succeeded)
+        {
+            var errors = string.Join(", ", result.Errors.Select(e => e.Description));
+            throw new InvalidOperationException($"Error al crear usuario: {errors}");
+        }
+
+        return user.Id;
     }
 
     public async Task<bool> AddUserToRoleAsync(string userId, string roleName)

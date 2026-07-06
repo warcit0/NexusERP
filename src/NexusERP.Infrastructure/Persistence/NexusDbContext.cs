@@ -3,7 +3,9 @@ using Microsoft.EntityFrameworkCore;
 using NexusERP.Application.Common.Interfaces;
 using NexusERP.Domain.Entities;
 using NexusERP.Infrastructure.Persistence.Interceptors;
-
+using NexusERP.Domain.Entities.Catalog;
+using NexusERP.Domain.Entities.Sales;
+using NexusERP.Domain.Entities.Inventory;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using NexusERP.Infrastructure.Identity;
 
@@ -20,6 +22,22 @@ public class NexusDbContext : IdentityDbContext<ApplicationUser>, INexusDbContex
     public DbSet<License> Licenses => Set<License>();
     public DbSet<Branch> Branches => Set<Branch>();
     public DbSet<CashRegister> CashRegisters => Set<CashRegister>();
+    public DbSet<CashRegisterSession> CashRegisterSessions => Set<CashRegisterSession>();
+    
+    public DbSet<Tax> Taxes => Set<Tax>();
+    public DbSet<Category> Categories => Set<Category>();
+    public DbSet<Brand> Brands => Set<Brand>();
+    public DbSet<Product> Products => Set<Product>();
+    public DbSet<ProductVariant> ProductVariants => Set<ProductVariant>();
+
+    public DbSet<Customer> Customers => Set<Customer>();
+    public DbSet<Sale> Sales => Set<Sale>();
+    public DbSet<SaleDetail> SaleDetails => Set<SaleDetail>();
+    public DbSet<Payment> Payments => Set<Payment>();
+
+    public DbSet<NexusERP.Domain.Entities.Inventory.InventoryTransaction> InventoryTransactions => Set<NexusERP.Domain.Entities.Inventory.InventoryTransaction>();
+    public DbSet<NexusERP.Domain.Entities.Inventory.InventoryBalance> InventoryBalances => Set<NexusERP.Domain.Entities.Inventory.InventoryBalance>();
+
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
 
     public NexusDbContext(
@@ -44,10 +62,71 @@ public class NexusDbContext : IdentityDbContext<ApplicationUser>, INexusDbContex
         // Configuración de schemas y filtros
         builder.Entity<Branch>().ToTable("Branches", "tenant");
         builder.Entity<CashRegister>().ToTable("CashRegisters", "tenant");
+        builder.Entity<CashRegisterSession>().ToTable("CashRegisterSessions", "tenant");
+        
+        builder.Entity<Tax>().ToTable("Taxes", "tenant");
+        builder.Entity<Category>().ToTable("Categories", "tenant");
+        builder.Entity<Brand>().ToTable("Brands", "tenant");
+        builder.Entity<Product>().ToTable("Products", "tenant");
+        builder.Entity<ProductVariant>().ToTable("ProductVariants", "tenant");
+        
+        builder.Entity<Customer>().ToTable("Customers", "tenant");
+        builder.Entity<Sale>().ToTable("Sales", "tenant");
+        builder.Entity<SaleDetail>().ToTable("SaleDetails", "tenant");
+        builder.Entity<Payment>().ToTable("Payments", "tenant");
+        
+        builder.Entity<NexusERP.Domain.Entities.Inventory.InventoryTransaction>().ToTable("InventoryTransactions", "tenant");
+        builder.Entity<NexusERP.Domain.Entities.Inventory.InventoryBalance>().ToTable("InventoryBalances", "tenant");
         
         // Filtro global para aislamiento de Tenants
         builder.Entity<Branch>().HasQueryFilter(e => e.TenantId == _currentTenantService.TenantId);
         builder.Entity<CashRegister>().HasQueryFilter(e => e.TenantId == _currentTenantService.TenantId);
+        builder.Entity<CashRegisterSession>().HasQueryFilter(e => e.TenantId == _currentTenantService.TenantId);
+        
+        builder.Entity<Tax>().HasQueryFilter(e => e.TenantId == _currentTenantService.TenantId);
+        builder.Entity<Category>().HasQueryFilter(e => e.TenantId == _currentTenantService.TenantId);
+        builder.Entity<Brand>().HasQueryFilter(e => e.TenantId == _currentTenantService.TenantId);
+        builder.Entity<Product>().HasQueryFilter(e => e.TenantId == _currentTenantService.TenantId);
+        builder.Entity<ProductVariant>().HasQueryFilter(e => e.TenantId == _currentTenantService.TenantId);
+        
+        builder.Entity<Customer>().HasQueryFilter(e => e.TenantId == _currentTenantService.TenantId);
+        builder.Entity<Sale>().HasQueryFilter(e => e.TenantId == _currentTenantService.TenantId);
+        builder.Entity<SaleDetail>().HasQueryFilter(e => e.TenantId == _currentTenantService.TenantId);
+        builder.Entity<Payment>().HasQueryFilter(e => e.TenantId == _currentTenantService.TenantId);
+        
+        builder.Entity<NexusERP.Domain.Entities.Inventory.InventoryTransaction>().HasQueryFilter(e => e.TenantId == _currentTenantService.TenantId);
+        builder.Entity<NexusERP.Domain.Entities.Inventory.InventoryBalance>().HasQueryFilter(e => e.TenantId == _currentTenantService.TenantId);
+        
+        // Relaciones complejas
+        builder.Entity<ProductVariant>()
+            .HasOne(pv => pv.Product)
+            .WithMany(p => p.Variants)
+            .HasForeignKey(pv => pv.ProductId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.Entity<Sale>()
+            .HasOne(s => s.Branch)
+            .WithMany()
+            .HasForeignKey(s => s.BranchId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.Entity<Sale>()
+            .HasOne(s => s.Session)
+            .WithMany()
+            .HasForeignKey(s => s.CashRegisterSessionId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.Entity<InventoryTransaction>()
+            .HasOne(it => it.Branch)
+            .WithMany()
+            .HasForeignKey(it => it.BranchId)
+            .OnDelete(DeleteBehavior.Restrict);
+            
+        builder.Entity<InventoryBalance>()
+            .HasOne(ib => ib.Branch)
+            .WithMany()
+            .HasForeignKey(ib => ib.BranchId)
+            .OnDelete(DeleteBehavior.Restrict);
 
         builder.ApplyConfigurationsFromAssembly(typeof(NexusDbContext).Assembly);
     }
@@ -59,6 +138,20 @@ public class NexusDbContext : IdentityDbContext<ApplicationUser>, INexusDbContex
 
     public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
     {
+        // Auto-asignar TenantId a todas las entidades TenantEntity que se estén agregando
+        var tenantId = _currentTenantService.TenantId;
+        if (tenantId.HasValue && tenantId.Value != Guid.Empty)
+        {
+            foreach (var entry in ChangeTracker.Entries<TenantEntity>()
+                         .Where(e => e.State == EntityState.Added))
+            {
+                if (entry.Entity.TenantId == Guid.Empty)
+                {
+                    entry.Entity.TenantId = tenantId.Value;
+                }
+            }
+        }
+
         await DispatchDomainEvents();
         return await base.SaveChangesAsync(cancellationToken);
     }

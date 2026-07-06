@@ -57,39 +57,37 @@ builder.Services.AddApiVersioning(options =>
     options.ReportApiVersions = true; // Agrega headers: api-supported-versions, api-deprecated-versions
 }).AddMvc();
 
+// Configure CORS
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowWebDashboard",
+        policy =>
+        {
+            policy.WithOrigins("http://localhost:5237", "https://localhost:7116", "http://localhost:5001", "https://localhost:5001")
+                  .AllowAnyHeader()
+                  .AllowAnyMethod();
+        });
+});
+
 builder.Services.AddControllers();
 // OpenAPI / Swagger Configuration
 builder.Services.AddOpenApi();
 
-// Configurar JWT Authentication
-var jwtSettings = builder.Configuration.GetSection("JwtSettings");
-var secretKey = jwtSettings["Secret"] ?? "SuperSecretKeyForDevelopmentOnly1234567890!";
-
-builder.Services.AddAuthentication(options =>
-{
-    options.DefaultAuthenticateScheme = Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerDefaults.AuthenticationScheme;
-    options.DefaultChallengeScheme = Microsoft.AspNetCore.Authentication.JwtBearer.JwtBearerDefaults.AuthenticationScheme;
-})
-.AddJwtBearer(options =>
-{
-    options.TokenValidationParameters = new Microsoft.IdentityModel.Tokens.TokenValidationParameters
-    {
-        ValidateIssuer = true,
-        ValidateAudience = true,
-        ValidateLifetime = true,
-        ValidateIssuerSigningKey = true,
-        ValidIssuer = jwtSettings["Issuer"] ?? "NexusERP",
-        ValidAudience = jwtSettings["Audience"] ?? "NexusERPClient",
-        IssuerSigningKey = new Microsoft.IdentityModel.Tokens.SymmetricSecurityKey(System.Text.Encoding.UTF8.GetBytes(secretKey))
-    };
-});
-
+// Authentication and Authorization are configured in Infrastructure DependencyInjection
 builder.Services.AddAuthorization();
 
-// Configurar Application Insights
-builder.Services.AddApplicationInsightsTelemetry();
+// Configurar Application Insights (Disabled for local dev without connection string)
+// builder.Services.AddApplicationInsightsTelemetry();
 
 var app = builder.Build();
+
+// Inicializar la base de datos y sembrar datos por defecto
+using (var scope = app.Services.CreateScope())
+{
+    var initialiser = scope.ServiceProvider.GetRequiredService<NexusERP.Infrastructure.Persistence.DatabaseInitializer>();
+    await initialiser.InitializeAsync();
+    await initialiser.SeedAsync();
+}
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
@@ -101,6 +99,8 @@ if (app.Environment.IsDevelopment())
 app.UseMiddleware<NexusERP.API.Middlewares.GlobalExceptionHandlerMiddleware>();
 
 app.UseHttpsRedirection();
+
+app.UseCors("AllowWebDashboard");
 
 app.UseAuthentication();
 

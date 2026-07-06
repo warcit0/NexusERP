@@ -2,6 +2,7 @@ using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using NexusERP.Application.Platform.Tenants.Commands.CreateTenant;
+using NexusERP.Application.Platform.Tenants.Queries.GetAllTenants;
 
 namespace NexusERP.API.Controllers;
 
@@ -15,6 +16,17 @@ public class TenantsController : ControllerBase
     public TenantsController(IMediator mediator)
     {
         _mediator = mediator;
+    }
+
+    /// <summary>
+    /// Lista todos los Tenants de la plataforma.
+    /// Solo accesible para SuperAdmins.
+    /// </summary>
+    [HttpGet]
+    public async Task<ActionResult<List<TenantDto>>> GetAll()
+    {
+        var result = await _mediator.Send(new GetAllTenantsQuery());
+        return Ok(result);
     }
 
     /// <summary>

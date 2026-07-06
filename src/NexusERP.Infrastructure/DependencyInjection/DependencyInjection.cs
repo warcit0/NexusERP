@@ -14,6 +14,7 @@ public static class DependencyInjection
     public static IServiceCollection AddInfrastructureServices(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddScoped<AuditableEntitySaveChangesInterceptor>();
+        services.AddScoped<DatabaseInitializer>();
 
         services.AddDbContext<NexusDbContext>((sp, options) =>
         {

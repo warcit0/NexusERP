@@ -17,19 +17,8 @@
         <MudTooltip Text="Notificaciones">
             <MudIconButton Icon="@Icons.Material.Filled.Notifications" Color="Color.Inherit" />
         </MudTooltip>
-        <MudMenu AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight">
-            <ActivatorContent>
-                <MudAvatar Color="Color.Secondary" Class="ml-4 cursor-pointer">
-                    <MudIcon Icon="@Icons.Material.Filled.Person" />
-                </MudAvatar>
-            </ActivatorContent>
-            <ChildContent>
-                <MudMenuItem>Perfil</MudMenuItem>
-                <MudMenuItem>Configuración</MudMenuItem>
-                <MudDivider />
-                <MudMenuItem OnClick="Logout">Cerrar Sesión</MudMenuItem>
-            </ChildContent>
-        </MudMenu>
+        <MudIconButton Icon="@Icons.Material.Filled.Person" Color="Color.Inherit" />
+        <MudIconButton Icon="@Icons.Material.Filled.Logout" Color="Color.Inherit" OnClick="Logout" Title="Cerrar Sesión" Class="ml-1" />
     </MudAppBar>
     <MudDrawer @bind-Open="_drawerOpen" Elevation="2" ClipMode="DrawerClipMode.Always">
         <NavMenu />
@@ -66,6 +55,6 @@
     {
         var authProvider = (CustomAuthStateProvider)AuthStateProvider;
         await authProvider.NotifyUserLoggedOut();
-        Navigation.NavigateTo("/login");
+        Navigation.NavigateTo("/login", forceLoad: true);
     }
 }

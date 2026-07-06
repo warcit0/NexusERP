@@ -7,5 +7,5 @@ public record CreateTenantCommand(
     string Subdomain,
     string AdminEmail,
     string AdminPassword,
-    string PlanCode
+    string? PlanCode = null
 ) : IRequest<CreateTenantResponse>;

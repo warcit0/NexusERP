@@ -14,9 +14,18 @@
     <AuthorizeView Roles="TenantAdmin">
         <Authorized>
             <MudNavGroup Title="Administración" Icon="@Icons.Material.Filled.AdminPanelSettings" Expanded="true">
-                <MudNavLink Href="/admin/users" Icon="@Icons.Material.Filled.People">Usuarios</MudNavLink>
-                <MudNavLink Href="/admin/branches" Icon="@Icons.Material.Filled.Store">Sucursales</MudNavLink>
-                <MudNavLink Href="/admin/registers" Icon="@Icons.Material.Filled.PointOfSale">Cajas</MudNavLink>
+                <MudNavLink Href="/catalog/categories" Icon="@Icons.Material.Filled.Category">Categorías</MudNavLink>
+                <MudNavLink Href="/catalog/brands" Icon="@Icons.Material.Filled.LocalOffer">Marcas</MudNavLink>
+                <MudNavLink Href="/catalog/taxes" Icon="@Icons.Material.Filled.ReceiptLong">Impuestos</MudNavLink>
+            </MudNavGroup>
+            
+            <MudNavGroup Title="Configuración" Icon="@Icons.Material.Filled.Settings" Expanded="true">
+                <MudNavLink Href="/settings/branches" Icon="@Icons.Material.Filled.Store">Sucursales</MudNavLink>
+                <MudNavLink Href="/settings/cash-registers" Icon="@Icons.Material.Filled.PointOfSale">Cajas Registradoras</MudNavLink>
+            </MudNavGroup>
+            
+            <MudNavGroup Title="Inventario" Icon="@Icons.Material.Filled.Inventory" Expanded="true">
+                <MudNavLink Href="/catalog/products" Icon="@Icons.Material.Filled.Inventory2">Productos</MudNavLink>
             </MudNavGroup>
         </Authorized>
     </AuthorizeView>

@@ -1,0 +1,62 @@
+@using System.Net.Http.Json
+@inject HttpClient Http
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <DialogContent>
+        <MudForm @ref="form">
+            <MudSelect T="Guid" @bind-Value="model.BranchId" Label="Sucursal"
+                       Required="true" RequiredError="Seleccione una sucursal" Class="mb-3">
+                @foreach (var branch in branches)
+                {
+                    <MudSelectItem T="Guid" Value="@branch.Id">@branch.Name</MudSelectItem>
+                }
+            </MudSelect>
+            <MudTextField T="string" @bind-Value="model.Name" Label="Nombre de la Caja"
+                          Required="true" RequiredError="El nombre es requerido" Class="mb-3"
+                          HelperText="Ej: Caja 01" />
+            <MudTextField T="string" @bind-Value="model.MacAddress" Label="Dirección MAC (opcional)"
+                          Class="mb-3" HelperText="Ej: AA:BB:CC:DD:EE:FF" />
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancelar</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Submit" Disabled="@loading">
+            @if (loading) { <MudProgressCircular Size="Size.Small" Indeterminate="true" /> } else { <MudText>Crear</MudText> }
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = null!;
+    private MudForm form = null!;
+    private bool loading;
+    private List<BranchItem> branches = new();
+    private CreateCashRegisterModel model = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        try { branches = await Http.GetFromJsonAsync<List<BranchItem>>("api/v1/settings/branches") ?? new(); }
+        catch { Snackbar.Add("Error cargando sucursales", Severity.Error); }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private async Task Submit()
+    {
+        await form.ValidateAsync();
+        if (!form.IsValid) return;
+        loading = true;
+        try
+        {
+            var response = await Http.PostAsJsonAsync("api/v1/settings/cashregisters", model);
+            if (response.IsSuccessStatusCode) { Snackbar.Add("Caja creada", Severity.Success); MudDialog.Close(DialogResult.Ok(true)); }
+            else Snackbar.Add($"Error: {await response.Content.ReadAsStringAsync()}", Severity.Error);
+        }
+        catch { Snackbar.Add("Error de conexión", Severity.Error); }
+        finally { loading = false; }
+    }
+
+    public class BranchItem { public Guid Id { get; set; } public string Name { get; set; } = string.Empty; }
+    public class CreateCashRegisterModel { public Guid BranchId { get; set; } public string Name { get; set; } = string.Empty; public string MacAddress { get; set; } = string.Empty; }
+}

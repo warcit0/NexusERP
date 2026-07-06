@@ -1,0 +1,78 @@
+@page "/settings/cash-registers"
+@using Microsoft.AspNetCore.Authorization
+@using System.Net.Http.Json
+@inject HttpClient Http
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+@attribute [Authorize]
+
+<MudText Typo="Typo.h5" Class="mb-4">Cajas Registradoras</MudText>
+
+<MudPaper Class="pa-4">
+    <MudToolBar>
+        <MudSpacer />
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="OpenCreateDialog">Nueva Caja</MudButton>
+    </MudToolBar>
+
+    <MudTable Items="@cashRegisters" Loading="@loading" Hover="true" Striped="true">
+        <HeaderContent>
+            <MudTh>Sucursal</MudTh>
+            <MudTh>Nombre</MudTh>
+            <MudTh>MAC</MudTh>
+            <MudTh>Estado</MudTh>
+            <MudTh>Abierta</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Sucursal">@context.BranchName</MudTd>
+            <MudTd DataLabel="Nombre">@context.Name</MudTd>
+            <MudTd DataLabel="MAC"><code>@context.MacAddress</code></MudTd>
+            <MudTd DataLabel="Estado">
+                <MudChip T="string" Size="Size.Small" Color="@(context.IsActive ? Color.Success : Color.Error)">
+                    @(context.IsActive ? "Activa" : "Inactiva")
+                </MudChip>
+            </MudTd>
+            <MudTd DataLabel="Abierta">
+                <MudChip T="string" Size="Size.Small" Color="@(context.IsOpen ? Color.Warning : Color.Default)">
+                    @(context.IsOpen ? "Abierta" : "Cerrada")
+                </MudChip>
+            </MudTd>
+        </RowTemplate>
+        <NoRecordsContent>
+            <MudText>No hay cajas registradas.</MudText>
+        </NoRecordsContent>
+    </MudTable>
+</MudPaper>
+
+@code {
+    private List<CashRegisterDto> cashRegisters = new();
+    private bool loading = true;
+
+    protected override async Task OnInitializedAsync() => await LoadCashRegisters();
+
+    private async Task LoadCashRegisters()
+    {
+        loading = true; StateHasChanged();
+        try { cashRegisters = await Http.GetFromJsonAsync<List<CashRegisterDto>>("api/v1/settings/cashregisters") ?? new(); }
+        catch { Snackbar.Add("Error al cargar cajas", Severity.Error); }
+        finally { loading = false; StateHasChanged(); }
+    }
+
+    private async Task OpenCreateDialog()
+    {
+        var options = new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Small, FullWidth = true };
+        var dialog = await DialogService.ShowAsync<CashRegisterCreateDialog>("Nueva Caja Registradora", options);
+        var result = await dialog.Result;
+        if (!result.Canceled) await LoadCashRegisters();
+    }
+
+    public class CashRegisterDto
+    {
+        public Guid Id { get; set; }
+        public Guid BranchId { get; set; }
+        public string BranchName { get; set; } = string.Empty;
+        public string Name { get; set; } = string.Empty;
+        public string MacAddress { get; set; } = string.Empty;
+        public bool IsActive { get; set; }
+        public bool IsOpen { get; set; }
+    }
+}

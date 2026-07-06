@@ -1,0 +1,157 @@
+@using System.Net.Http.Json
+@inject HttpClient Http
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">Nuevo Producto</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudForm @ref="form">
+            <MudGrid>
+                <MudItem xs="12" md="6">
+                    <MudTextField T="string" @bind-Value="model.Name" Label="Nombre del Producto"
+                                  Required="true" RequiredError="Requerido" Class="mb-2" />
+                </MudItem>
+                <MudItem xs="12" md="6">
+                    <MudTextField T="string" @bind-Value="model.MeasurementUnit" Label="Unidad de Medida"
+                                  Required="true" Class="mb-2" HelperText="Ej: Unidad, Kg, L" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudTextField T="string" @bind-Value="model.Description" Label="Descripción" Lines="2" Class="mb-2" />
+                </MudItem>
+                <MudItem xs="12" md="4">
+                    <MudSelect T="Guid" @bind-Value="model.CategoryId" Label="Categoría" Required="true" Class="mb-2">
+                        @foreach (var c in categories)
+                        {
+                            <MudSelectItem T="Guid" Value="@c.Id">@c.Name</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12" md="4">
+                    <MudSelect T="Guid?" @bind-Value="model.BrandId" Label="Marca (opcional)" Class="mb-2">
+                        <MudSelectItem T="Guid?" Value="null">— Sin marca —</MudSelectItem>
+                        @foreach (var b in brands)
+                        {
+                            <MudSelectItem T="Guid?" Value="@((Guid?)b.Id)">@b.Name</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12" md="4">
+                    <MudSelect T="Guid?" @bind-Value="model.TaxId" Label="Impuesto (opcional)" Class="mb-2">
+                        <MudSelectItem T="Guid?" Value="null">— Sin impuesto —</MudSelectItem>
+                        @foreach (var t in taxes)
+                        {
+                            <MudSelectItem T="Guid?" Value="@((Guid?)t.Id)">@t.Name (@t.Percentage%)</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12" md="6">
+                    <MudTextField T="string" @bind-Value="model.CabysCode" Label="Código CABYS (opcional)" Class="mb-2" />
+                </MudItem>
+            </MudGrid>
+
+            <MudDivider Class="my-4" />
+            <MudText Typo="Typo.subtitle1" Class="mb-2">Variantes</MudText>
+
+            @foreach (var (variant, index) in model.Variants.Select((v, i) => (v, i)))
+            {
+                <MudPaper Class="pa-3 mb-2" Elevation="1">
+                    <MudGrid>
+                        <MudItem xs="12" md="2">
+                            <MudTextField T="string" @bind-Value="variant.Sku" Label="SKU" Margin="Margin.Dense" />
+                        </MudItem>
+                        <MudItem xs="12" md="2">
+                            <MudTextField T="string" @bind-Value="variant.Barcode" Label="Cód. Barras" Margin="Margin.Dense" />
+                        </MudItem>
+                        <MudItem xs="12" md="2">
+                            <MudTextField T="string" @bind-Value="variant.Size" Label="Talla" Margin="Margin.Dense" />
+                        </MudItem>
+                        <MudItem xs="12" md="2">
+                            <MudTextField T="string" @bind-Value="variant.Color" Label="Color" Margin="Margin.Dense" />
+                        </MudItem>
+                        <MudItem xs="12" md="2">
+                            <MudNumericField T="decimal" @bind-Value="variant.Cost" Label="Costo" Margin="Margin.Dense" Min="0" />
+                        </MudItem>
+                        <MudItem xs="12" md="1">
+                            <MudNumericField T="decimal" @bind-Value="variant.Price" Label="Precio" Margin="Margin.Dense" Min="0" />
+                        </MudItem>
+                        <MudItem xs="12" md="1" Class="d-flex align-center">
+                            <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error"
+                                           OnClick="@(() => RemoveVariant(index))" Size="Size.Small" />
+                        </MudItem>
+                    </MudGrid>
+                </MudPaper>
+            }
+
+            <MudButton StartIcon="@Icons.Material.Filled.Add" OnClick="AddVariant" Variant="Variant.Outlined" Size="Size.Small" Class="mt-1">
+                Agregar variante
+            </MudButton>
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancelar</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Submit" Disabled="@loading">
+            @if (loading) { <MudProgressCircular Size="Size.Small" Indeterminate="true" /> } else { <MudText>Crear Producto</MudText> }
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = null!;
+    private MudForm form = null!;
+    private bool loading;
+
+    private List<CatalogItem> categories = new();
+    private List<CatalogItem> brands = new();
+    private List<TaxItem> taxes = new();
+
+    private CreateProductModel model = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            categories = await Http.GetFromJsonAsync<List<CatalogItem>>("api/v1/catalog/categories") ?? new();
+            brands = await Http.GetFromJsonAsync<List<CatalogItem>>("api/v1/catalog/brands") ?? new();
+            taxes = await Http.GetFromJsonAsync<List<TaxItem>>("api/v1/catalog/taxes") ?? new();
+        }
+        catch { Snackbar.Add("Error cargando datos del catálogo", Severity.Error); }
+    }
+
+    private void AddVariant() => model.Variants.Add(new VariantModel());
+    private void RemoveVariant(int index) => model.Variants.RemoveAt(index);
+    private void Cancel() => MudDialog.Cancel();
+
+    private async Task Submit()
+    {
+        await form.ValidateAsync();
+        if (!form.IsValid) return;
+        if (!model.Variants.Any()) { Snackbar.Add("Agregue al menos una variante", Severity.Warning); return; }
+
+        loading = true;
+        try
+        {
+            var response = await Http.PostAsJsonAsync("api/v1/catalog/products", model);
+            if (response.IsSuccessStatusCode) { Snackbar.Add("Producto creado", Severity.Success); MudDialog.Close(DialogResult.Ok(true)); }
+            else Snackbar.Add($"Error: {await response.Content.ReadAsStringAsync()}", Severity.Error);
+        }
+        catch { Snackbar.Add("Error de conexión", Severity.Error); }
+        finally { loading = false; }
+    }
+
+    public class CatalogItem { public Guid Id { get; set; } public string Name { get; set; } = ""; }
+    public class TaxItem { public Guid Id { get; set; } public string Name { get; set; } = ""; public decimal Percentage { get; set; } }
+    public class VariantModel { public string Sku { get; set; } = ""; public string Barcode { get; set; } = ""; public string Size { get; set; } = ""; public string Color { get; set; } = ""; public decimal Cost { get; set; } public decimal Price { get; set; } }
+    public class CreateProductModel
+    {
+        public string Name { get; set; } = "";
+        public string Description { get; set; } = "";
+        public Guid CategoryId { get; set; }
+        public Guid? BrandId { get; set; }
+        public Guid? TaxId { get; set; }
+        public string CabysCode { get; set; } = "";
+        public string MeasurementUnit { get; set; } = "Unidad";
+        public List<VariantModel> Variants { get; set; } = new() { new VariantModel() };
+    }
+}

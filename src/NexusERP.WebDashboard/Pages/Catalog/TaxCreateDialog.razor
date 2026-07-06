@@ -1,0 +1,48 @@
+@using System.Net.Http.Json
+@inject HttpClient Http
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <DialogContent>
+        <MudForm @ref="form">
+            <MudTextField T="string" @bind-Value="model.Name" Label="Nombre del Impuesto"
+                          Required="true" RequiredError="El nombre es requerido" Class="mb-3"
+                          HelperText="Ej: IVA 13%" />
+            <MudNumericField T="decimal" @bind-Value="model.Percentage" Label="Porcentaje (%)"
+                             Required="true" Min="0" Max="100" Class="mb-3"
+                             HelperText="Ej: 13" />
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancelar</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Submit" Disabled="@loading">
+            @if (loading) { <MudProgressCircular Size="Size.Small" Indeterminate="true" /> } else { <MudText>Crear</MudText> }
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = null!;
+    private MudForm form = null!;
+    private bool loading;
+    private CreateTaxModel model = new();
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private async Task Submit()
+    {
+        await form.ValidateAsync();
+        if (!form.IsValid) return;
+        loading = true;
+        try
+        {
+            var response = await Http.PostAsJsonAsync("api/v1/catalog/taxes", model);
+            if (response.IsSuccessStatusCode) { Snackbar.Add("Impuesto creado", Severity.Success); MudDialog.Close(DialogResult.Ok(true)); }
+            else Snackbar.Add($"Error: {await response.Content.ReadAsStringAsync()}", Severity.Error);
+        }
+        catch { Snackbar.Add("Error de conexión", Severity.Error); }
+        finally { loading = false; }
+    }
+
+    public class CreateTaxModel { public string Name { get; set; } = string.Empty; public decimal Percentage { get; set; } }
+}

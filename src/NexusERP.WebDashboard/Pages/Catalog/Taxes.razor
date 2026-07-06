@@ -1,0 +1,61 @@
+@page "/catalog/taxes"
+@using Microsoft.AspNetCore.Authorization
+@using System.Net.Http.Json
+@inject HttpClient Http
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+@attribute [Authorize]
+
+<MudText Typo="Typo.h5" Class="mb-4">Impuestos</MudText>
+
+<MudPaper Class="pa-4">
+    <MudToolBar>
+        <MudSpacer />
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="OpenCreateDialog">Nuevo Impuesto</MudButton>
+    </MudToolBar>
+
+    <MudTable Items="@taxes" Loading="@loading" Hover="true" Striped="true">
+        <HeaderContent>
+            <MudTh>Nombre</MudTh>
+            <MudTh>Porcentaje</MudTh>
+            <MudTh>Estado</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Nombre">@context.Name</MudTd>
+            <MudTd DataLabel="Porcentaje">@context.Percentage.ToString("0.00")%</MudTd>
+            <MudTd DataLabel="Estado">
+                <MudChip T="string" Size="Size.Small" Color="@(context.IsActive ? Color.Success : Color.Error)">
+                    @(context.IsActive ? "Activo" : "Inactivo")
+                </MudChip>
+            </MudTd>
+        </RowTemplate>
+        <NoRecordsContent>
+            <MudText>No hay impuestos registrados.</MudText>
+        </NoRecordsContent>
+    </MudTable>
+</MudPaper>
+
+@code {
+    private List<TaxDto> taxes = new();
+    private bool loading = true;
+
+    protected override async Task OnInitializedAsync() => await LoadTaxes();
+
+    private async Task LoadTaxes()
+    {
+        loading = true; StateHasChanged();
+        try { taxes = await Http.GetFromJsonAsync<List<TaxDto>>("api/v1/catalog/taxes") ?? new(); }
+        catch { Snackbar.Add("Error al cargar impuestos", Severity.Error); }
+        finally { loading = false; StateHasChanged(); }
+    }
+
+    private async Task OpenCreateDialog()
+    {
+        var options = new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Small, FullWidth = true };
+        var dialog = await DialogService.ShowAsync<TaxCreateDialog>("Nuevo Impuesto", options);
+        var result = await dialog.Result;
+        if (!result.Canceled) await LoadTaxes();
+    }
+
+    public class TaxDto { public Guid Id { get; set; } public string Name { get; set; } = string.Empty; public decimal Percentage { get; set; } public bool IsActive { get; set; } }
+}

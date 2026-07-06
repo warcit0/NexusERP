@@ -148,9 +148,9 @@ public class AuditEntry
             TableName = TableName,
             DateTime = DateTime.UtcNow,
             PrimaryKey = System.Text.Json.JsonSerializer.Serialize(KeyValues),
-            OldValues = OldValues.Count == 0 ? null : System.Text.Json.JsonSerializer.Serialize(OldValues),
-            NewValues = NewValues.Count == 0 ? null : System.Text.Json.JsonSerializer.Serialize(NewValues),
-            AffectedColumns = ChangedColumns.Count == 0 ? null : System.Text.Json.JsonSerializer.Serialize(ChangedColumns)
+            OldValues = OldValues.Count == 0 ? "{}" : System.Text.Json.JsonSerializer.Serialize(OldValues),
+            NewValues = NewValues.Count == 0 ? "{}" : System.Text.Json.JsonSerializer.Serialize(NewValues),
+            AffectedColumns = ChangedColumns.Count == 0 ? "[]" : System.Text.Json.JsonSerializer.Serialize(ChangedColumns)
         };
         return audit;
     }

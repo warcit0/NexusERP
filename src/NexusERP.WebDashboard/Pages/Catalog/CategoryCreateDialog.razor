@@ -1,0 +1,80 @@
+@using Microsoft.AspNetCore.Authorization
+@using System.Net.Http.Json
+@inject HttpClient Http
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <DialogContent>
+        <MudForm @ref="form" @bind-IsValid="@success">
+            <MudTextField T="string" @bind-Value="model.Name" Label="Nombre de Categoría" 
+                          Required="true" RequiredError="El nombre es requerido" Class="mb-3"/>
+                          
+            <MudTextField T="string" @bind-Value="model.Description" Label="Descripción" 
+                          Lines="3" Class="mb-3"/>
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancelar</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Submit" Disabled="@loading">
+            @if(loading)
+            {
+                <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true"/>
+            }
+            else
+            {
+                <MudText>Crear</MudText>
+            }
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = null!;
+    
+    private MudForm form = null!;
+    private bool success;
+    private bool loading = false;
+    private CreateCategoryCommand model = new();
+
+    private void Cancel()
+    {
+        MudDialog.Cancel();
+    }
+
+    private async Task Submit()
+    {
+        await form.ValidateAsync();
+        if (form.IsValid)
+        {
+            loading = true;
+            try
+            {
+                var response = await Http.PostAsJsonAsync("api/v1/catalog/categories", model);
+                if (response.IsSuccessStatusCode)
+                {
+                    Snackbar.Add("Categoría creada", Severity.Success);
+                    MudDialog.Close(DialogResult.Ok(true));
+                }
+                else
+                {
+                    var errorContent = await response.Content.ReadAsStringAsync();
+                    Snackbar.Add($"Error: {errorContent}", Severity.Error);
+                }
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add("Error de conexión", Severity.Error);
+            }
+            finally
+            {
+                loading = false;
+            }
+        }
+    }
+
+    public class CreateCategoryCommand
+    {
+        public string Name { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+    }
+}

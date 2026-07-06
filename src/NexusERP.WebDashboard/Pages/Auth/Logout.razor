@@ -1,0 +1,15 @@
+@page "/logout"
+@using NexusERP.WebDashboard.Auth
+@inject AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager Navigation
+
+<MudText Typo="Typo.h5">Cerrando sesión...</MudText>
+
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        var authProvider = (CustomAuthStateProvider)AuthStateProvider;
+        await authProvider.NotifyUserLoggedOut();
+        Navigation.NavigateTo("/login");
+    }
+}

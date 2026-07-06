@@ -1,0 +1,68 @@
+@page "/catalog/brands"
+@using Microsoft.AspNetCore.Authorization
+@using System.Net.Http.Json
+@inject HttpClient Http
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+@attribute [Authorize]
+
+<MudText Typo="Typo.h5" Class="mb-4">Marcas</MudText>
+
+<MudPaper Class="pa-4">
+    <MudToolBar>
+        <MudSpacer />
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="OpenCreateDialog">Nueva Marca</MudButton>
+    </MudToolBar>
+
+    <MudTable Items="@brands" Loading="@loading" Hover="true" Breakpoint="Breakpoint.Sm" Striped="true">
+        <HeaderContent>
+            <MudTh>Nombre</MudTh>
+            <MudTh>Descripción</MudTh>
+            <MudTh>Estado</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Nombre">@context.Name</MudTd>
+            <MudTd DataLabel="Descripción">@context.Description</MudTd>
+            <MudTd DataLabel="Estado">
+                <MudChip T="string" Size="Size.Small" Color="@(context.IsActive ? Color.Success : Color.Error)">
+                    @(context.IsActive ? "Activo" : "Inactivo")
+                </MudChip>
+            </MudTd>
+        </RowTemplate>
+        <NoRecordsContent>
+            <MudText>No hay marcas registradas.</MudText>
+        </NoRecordsContent>
+    </MudTable>
+</MudPaper>
+
+@code {
+    private List<BrandDto> brands = new();
+    private bool loading = true;
+
+    protected override async Task OnInitializedAsync() => await LoadBrands();
+
+    private async Task LoadBrands()
+    {
+        loading = true;
+        StateHasChanged();
+        try { brands = await Http.GetFromJsonAsync<List<BrandDto>>("api/v1/catalog/brands") ?? new(); }
+        catch { Snackbar.Add("Error al cargar marcas", Severity.Error); }
+        finally { loading = false; StateHasChanged(); }
+    }
+
+    private async Task OpenCreateDialog()
+    {
+        var options = new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Small, FullWidth = true };
+        var dialog = await DialogService.ShowAsync<BrandCreateDialog>("Nueva Marca", options);
+        var result = await dialog.Result;
+        if (!result.Canceled) await LoadBrands();
+    }
+
+    public class BrandDto
+    {
+        public Guid Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+        public bool IsActive { get; set; }
+    }
+}
