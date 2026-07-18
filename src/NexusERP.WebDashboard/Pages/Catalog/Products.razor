@@ -53,6 +53,7 @@
                                 <MudTh>Color</MudTh>
                                 <MudTh>Costo</MudTh>
                                 <MudTh>Precio</MudTh>
+                                <MudTh>Acciones</MudTh>
                             </HeaderContent>
                             <RowTemplate Context="variant">
                                 <MudTd>@variant.Sku</MudTd>
@@ -61,6 +62,10 @@
                                 <MudTd>@variant.Color</MudTd>
                                 <MudTd>₡@variant.Cost.ToString("N2")</MudTd>
                                 <MudTd>₡@variant.Price.ToString("N2")</MudTd>
+                                <MudTd>
+                                    <MudIconButton Icon="@Icons.Material.Filled.Edit" Size="Size.Small" Color="Color.Primary"
+                                                   OnClick="@(() => OpenEditVariantDialog(variant))" Title="Editar variante" />
+                                </MudTd>
                             </RowTemplate>
                         </MudTable>
                     </td>
@@ -91,6 +96,24 @@
     {
         var options = new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Large, FullWidth = true };
         var dialog = await DialogService.ShowAsync<ProductCreateDialog>("Nuevo Producto", options);
+        var result = await dialog.Result;
+        if (!result.Canceled) await LoadProducts();
+    }
+
+    private async Task OpenEditVariantDialog(ProductVariantDto variant)
+    {
+        var parameters = new DialogParameters
+        {
+            ["VariantId"] = variant.Id,
+            ["Sku"] = variant.Sku,
+            ["Barcode"] = variant.Barcode,
+            ["Size"] = variant.Size,
+            ["VariantColor"] = variant.Color,
+            ["Cost"] = variant.Cost,
+            ["Price"] = variant.Price
+        };
+        var options = new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Small, FullWidth = true };
+        var dialog = await DialogService.ShowAsync<ProductVariantEditDialog>("Editar Variante", parameters, options);
         var result = await dialog.Result;
         if (!result.Canceled) await LoadProducts();
     }

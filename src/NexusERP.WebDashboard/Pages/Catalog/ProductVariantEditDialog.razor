@@ -1,0 +1,107 @@
+@using System.Net.Http.Json
+@inject HttpClient Http
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">Editar Variante</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudForm @ref="form">
+            <MudGrid>
+                <MudItem xs="12" md="6">
+                    <MudTextField T="string" @bind-Value="model.Sku" Label="SKU" Required="true" Class="mb-2" />
+                </MudItem>
+                <MudItem xs="12" md="6">
+                    <MudTextField T="string" @bind-Value="model.Barcode" Label="Código de Barras" Class="mb-2" />
+                </MudItem>
+                <MudItem xs="12" md="6">
+                    <MudTextField T="string" @bind-Value="model.Size" Label="Talla / Tamaño" Class="mb-2" />
+                </MudItem>
+                <MudItem xs="12" md="6">
+                    <MudTextField T="string" @bind-Value="model.Color" Label="Color" Class="mb-2" />
+                </MudItem>
+                <MudItem xs="12" md="6">
+                    <MudNumericField T="decimal" @bind-Value="model.Cost" Label="Costo (₡)" Min="0" Format="N2" Class="mb-2" />
+                </MudItem>
+                <MudItem xs="12" md="6">
+                    <MudNumericField T="decimal" @bind-Value="model.Price" Label="Precio de Venta (₡)" Min="0" Format="N2" Class="mb-2" />
+                </MudItem>
+            </MudGrid>
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancelar</MudButton>
+        <MudButton Color="MudBlazor.Color.Primary" Variant="Variant.Filled" OnClick="Submit" Disabled="@loading">
+            @if (loading) { <MudProgressCircular Size="MudBlazor.Size.Small" Indeterminate="true" /> } else { <MudText>Guardar</MudText> }
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter] public Guid VariantId { get; set; }
+    [Parameter] public string Sku { get; set; } = string.Empty;
+    [Parameter] public string Barcode { get; set; } = string.Empty;
+    [Parameter] public string Size { get; set; } = string.Empty;
+    [Parameter] public string VariantColor { get; set; } = string.Empty;
+    [Parameter] public decimal Cost { get; set; }
+    [Parameter] public decimal Price { get; set; }
+
+    private MudForm form = null!;
+    private bool loading;
+    private VariantEditModel model = new();
+
+    protected override void OnParametersSet()
+    {
+        model = new VariantEditModel
+        {
+            Sku = Sku,
+            Barcode = Barcode,
+            Size = Size,
+            Color = VariantColor,
+            Cost = Cost,
+            Price = Price
+        };
+    }
+
+    private async Task Submit()
+    {
+        await form.ValidateAsync();
+        if (!form.IsValid) return;
+
+        loading = true;
+        try
+        {
+            var response = await Http.PutAsJsonAsync($"api/v1/catalog/products/variants/{VariantId}", model);
+            if (response.IsSuccessStatusCode)
+            {
+                Snackbar.Add("Variante actualizada", Severity.Success);
+                MudDialog.Close(DialogResult.Ok(true));
+            }
+            else
+            {
+                var error = await response.Content.ReadAsStringAsync();
+                Snackbar.Add($"Error: {error}", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add("Error de conexión: " + ex.Message, Severity.Error);
+        }
+        finally { loading = false; }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    public class VariantEditModel
+    {
+        public string Sku { get; set; } = string.Empty;
+        public string Barcode { get; set; } = string.Empty;
+        public string Size { get; set; } = string.Empty;
+        public string Color { get; set; } = string.Empty;
+        public decimal Cost { get; set; }
+        public decimal Price { get; set; }
+    }
+}

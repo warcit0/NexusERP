@@ -14,5 +14,6 @@ public class InventoryTransaction : TenantEntity
     public decimal Quantity { get; set; } // Puede ser negativo o positivo dependiendo de la semántica
     
     public string Reference { get; set; } = string.Empty; // "Venta #0001", "Ajuste Manual", "Compra #992"
+    public string Notes { get; set; } = string.Empty;
     public DateTime TransactionDate { get; set; } = DateTime.UtcNow;
 }

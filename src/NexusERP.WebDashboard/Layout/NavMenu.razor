@@ -23,20 +23,17 @@
                 <MudNavLink Href="/settings/branches" Icon="@Icons.Material.Filled.Store">Sucursales</MudNavLink>
                 <MudNavLink Href="/settings/cash-registers" Icon="@Icons.Material.Filled.PointOfSale">Cajas Registradoras</MudNavLink>
             </MudNavGroup>
-            
-            <MudNavGroup Title="Inventario" Icon="@Icons.Material.Filled.Inventory" Expanded="true">
-                <MudNavLink Href="/catalog/products" Icon="@Icons.Material.Filled.Inventory2">Productos</MudNavLink>
-            </MudNavGroup>
         </Authorized>
     </AuthorizeView>
 
-    <MudNavGroup Title="Ventas" Icon="@Icons.Material.Filled.ShoppingCart">
-        <MudNavLink Href="/sales/new" Icon="@Icons.Material.Filled.AddShoppingCart">Nueva Venta</MudNavLink>
-        <MudNavLink Href="/sales/history" Icon="@Icons.Material.Filled.History">Historial</MudNavLink>
+    <MudNavGroup Title="Ventas / POS" Icon="@Icons.Material.Filled.PointOfSale" Expanded="true">
+        <MudNavLink Href="/sales/pos" Icon="@Icons.Material.Filled.ShoppingCartCheckout">Punto de Venta</MudNavLink>
+        <MudNavLink Href="/sales/history" Icon="@Icons.Material.Filled.ReceiptLong">Historial de Ventas</MudNavLink>
+        <MudNavLink Href="/sales/customers" Icon="@Icons.Material.Filled.People">Clientes</MudNavLink>
     </MudNavGroup>
 
-    <MudNavGroup Title="Inventario" Icon="@Icons.Material.Filled.Inventory">
-        <MudNavLink Href="/inventory/products" Icon="@Icons.Material.Filled.Category">Productos</MudNavLink>
-        <MudNavLink Href="/inventory/stock" Icon="@Icons.Material.Filled.Warehouse">Existencias</MudNavLink>
+    <MudNavGroup Title="Inventario" Icon="@Icons.Material.Filled.Inventory" Expanded="true">
+        <MudNavLink Href="/inventory/stock" Icon="@Icons.Material.Filled.Warehouse">Kardex y Existencias</MudNavLink>
+        <MudNavLink Href="/catalog/products" Icon="@Icons.Material.Filled.Category">Productos</MudNavLink>
     </MudNavGroup>
 </MudNavMenu>

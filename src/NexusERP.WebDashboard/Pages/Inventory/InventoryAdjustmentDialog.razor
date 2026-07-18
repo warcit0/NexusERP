@@ -1,0 +1,94 @@
+@using NexusERP.WebDashboard.Models.Catalog
+@inject HttpClient Http
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6"><MudIcon Icon="@Icons.Material.Filled.AddBox" Class="mr-2" />Ajustar Existencias</MudText>
+    </TitleContent>
+    <DialogContent>
+        @if (!string.IsNullOrEmpty(ProductName))
+        {
+            <MudAlert Severity="Severity.Info" Class="mb-3">
+                <b>@ProductName</b> — Stock actual: <b>@CurrentStock</b> unidades
+            </MudAlert>
+        }
+        <MudForm @ref="form">
+            <MudNumericField @bind-Value="Quantity" Label="Cantidad a Ajustar" Required="true"
+                             HelperText="Positivo para entradas (ej. +50), negativo para salidas (ej. -5)."
+                             Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Numbers" />
+            <MudTextField @bind-Value="Reason" Label="Motivo del ajuste" Required="true" Lines="2"
+                          Class="mt-3" HelperText="Ej: Compra inicial, Merma, Devolución..." />
+        </MudForm>
+        @if (Quantity != 0)
+        {
+            <MudAlert Severity="@(Quantity > 0 ? Severity.Success : Severity.Warning)" Class="mt-3">
+                Stock resultante: <b>@(CurrentStock + Quantity)</b> unidades
+            </MudAlert>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancelar</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Submit" Disabled="@loading">
+            @if (loading) { <MudProgressCircular Size="Size.Small" Indeterminate="true" /> }
+            else { <MudText>Guardar Ajuste</MudText> }
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter] public Guid ProductVariantId { get; set; }
+    [Parameter] public Guid BranchId { get; set; }
+    [Parameter] public string ProductName { get; set; } = string.Empty;
+    [Parameter] public decimal CurrentStock { get; set; }
+
+    private MudForm form = null!;
+    private bool loading;
+    private decimal Quantity;
+    private string Reason = string.Empty;
+
+    private async Task Submit()
+    {
+        await form.ValidateAsync();
+        if (form.IsValid)
+        {
+            if (Quantity == 0)
+            {
+                Snackbar.Add("La cantidad no puede ser 0.", Severity.Warning);
+                return;
+            }
+            loading = true;
+            try
+            {
+                var response = await Http.PostAsJsonAsync("api/v1/inventory/adjust", new
+                {
+                    ProductVariantId = ProductVariantId,
+                    BranchId = BranchId,
+                    Quantity = Quantity,
+                    Reason = Reason
+                });
+
+                if (response.IsSuccessStatusCode)
+                {
+                    Snackbar.Add($"Stock ajustado. Nuevo stock: {CurrentStock + Quantity}", Severity.Success);
+                    MudDialog.Close(DialogResult.Ok(true));
+                }
+                else
+                {
+                    var error = await response.Content.ReadAsStringAsync();
+                    Snackbar.Add("Error: " + error, Severity.Error);
+                }
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add("Error de red: " + ex.Message, Severity.Error);
+            }
+            finally { loading = false; }
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

@@ -1,0 +1,63 @@
+@using System.Net.Http.Json
+@inject HttpClient Http
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <DialogContent>
+        <MudText Typo="Typo.body1" Class="mb-4">Abriendo sesión para: <b>@CashRegisterName</b></MudText>
+        <MudNumericField T="decimal" Label="Monto Inicial en Caja" @bind-Value="initialAmount"
+                         Adornment="Adornment.Start" AdornmentText="₡" Min="0" />
+        <MudTextField @bind-Value="notes" Label="Notas (opcional)" Lines="2" Class="mt-3" />
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancelar</MudButton>
+        <MudButton Color="Color.Success" Variant="Variant.Filled" OnClick="Submit" Disabled="@loading">
+            @if (loading)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+            }
+            Abrir Sesión
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter] public string CashRegisterName { get; set; } = string.Empty;
+    [Parameter] public Guid CashRegisterId { get; set; }
+
+    private decimal initialAmount = 0;
+    private string notes = string.Empty;
+    private bool loading = false;
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private async Task Submit()
+    {
+        loading = true;
+        try
+        {
+            var payload = new { InitialAmount = initialAmount, Notes = notes };
+            var response = await Http.PostAsJsonAsync($"api/v1/settings/cashregisters/{CashRegisterId}/open", payload);
+            if (response.IsSuccessStatusCode)
+            {
+                Snackbar.Add("Sesión de caja abierta con éxito", Severity.Success);
+                MudDialog.Close(DialogResult.Ok(true));
+            }
+            else
+            {
+                var err = await response.Content.ReadAsStringAsync();
+                Snackbar.Add($"Error: {err}", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            loading = false;
+        }
+    }
+}

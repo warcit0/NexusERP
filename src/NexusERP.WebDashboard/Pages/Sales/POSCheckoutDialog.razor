@@ -1,0 +1,55 @@
+@using NexusERP.WebDashboard.Models.Sales
+
+<MudDialog>
+    <DialogContent>
+        <MudText Typo="Typo.h4" Align="Align.Center" Color="Color.Primary" Class="mb-4">@Total.ToString("C")</MudText>
+        
+        <MudSelect T="string" Label="Método de Pago" @bind-Value="payment.PaymentMethod" Class="mb-4">
+            <MudSelectItem Value="@("Efectivo")">Efectivo</MudSelectItem>
+            <MudSelectItem Value="@("Tarjeta")">Tarjeta</MudSelectItem>
+            <MudSelectItem Value="@("SINPE")">Transferencia / SINPE</MudSelectItem>
+        </MudSelect>
+
+        @if (payment.PaymentMethod == "Efectivo")
+        {
+            <MudNumericField T="decimal" Label="Monto Recibido" @bind-Value="cashReceived" Adornment="Adornment.Start" AdornmentText="$" />
+            @if (cashReceived >= Total)
+            {
+                <MudText Typo="Typo.h6" Color="Color.Success" Class="mt-2">Cambio: @((cashReceived - Total).ToString("C"))</MudText>
+            }
+        }
+        else
+        {
+            <MudTextField @bind-Value="payment.Reference" Label="Número de Referencia / Comprobante" />
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancelar</MudButton>
+        <MudButton Color="Color.Success" Variant="Variant.Filled" OnClick="Submit" Disabled="!IsValid">Confirmar Pago</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = null!;
+    
+    [Parameter] public decimal Total { get; set; }
+    
+    private PaymentModel payment = new() { PaymentMethod = "Efectivo" };
+    private decimal cashReceived;
+
+    protected override void OnInitialized()
+    {
+        payment.Amount = Total;
+        cashReceived = Total;
+    }
+
+    private bool IsValid => payment.PaymentMethod != "Efectivo" || cashReceived >= Total;
+
+    private void Cancel() => MudDialog.Cancel();
+
+    private void Submit()
+    {
+        payment.Amount = Total; // Siempre registramos el monto exacto de la venta, el cambio no es ingreso
+        MudDialog.Close(DialogResult.Ok(payment));
+    }
+}

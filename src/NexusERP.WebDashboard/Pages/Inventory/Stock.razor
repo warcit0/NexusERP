@@ -1,0 +1,283 @@
+@page "/inventory/stock"
+@using Microsoft.AspNetCore.Authorization
+@using System.Net.Http.Json
+@using NexusERP.WebDashboard.Models.Inventory
+@using NexusERP.WebDashboard.Models.Settings
+@using NexusERP.WebDashboard.Pages.Inventory
+@inject HttpClient Http
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+@attribute [Authorize]
+
+<MudText Typo="Typo.h5" Class="mb-4">Existencias e Inventario</MudText>
+
+<MudPaper Class="pa-4 mb-4">
+    <MudGrid>
+        <MudItem xs="12" md="6">
+            <MudSelect T="Guid?" Label="Filtrar por Sucursal" Value="selectedBranchId" ValueChanged="OnBranchChanged" Clearable="true">
+                @foreach (var branch in branches)
+                {
+                    <MudSelectItem T="Guid?" Value="@branch.Id">@branch.Name</MudSelectItem>
+                }
+            </MudSelect>
+        </MudItem>
+        <MudItem xs="12" md="6" Class="d-flex align-end">
+            <MudTextField T="string" Value="@searchString" ValueChanged="@OnSearchChanged" Label="Buscar producto o SKU..."
+                          Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
+                          Immediate="true" />
+        </MudItem>
+    </MudGrid>
+</MudPaper>
+
+<MudPaper Class="pa-4">
+    <MudTable Items="@filteredItems" Loading="@loading" Hover="true" Breakpoint="Breakpoint.Sm" Striped="true">
+        <HeaderContent>
+            <MudTh>Producto</MudTh>
+            <MudTh>SKU / Código</MudTh>
+            <MudTh>Variante</MudTh>
+            <MudTh>Sucursal</MudTh>
+            <MudTh>Stock Actual</MudTh>
+            <MudTh>Precio Venta</MudTh>
+            <MudTh>Acciones</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Producto">
+                <MudText Typo="Typo.body2"><b>@context.ProductName</b></MudText>
+            </MudTd>
+            <MudTd DataLabel="SKU / Código">
+                <MudText Typo="Typo.body2">@context.Sku</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">@context.Barcode</MudText>
+            </MudTd>
+            <MudTd DataLabel="Variante">
+                @if (!string.IsNullOrEmpty(context.Size) || !string.IsNullOrEmpty(context.Color))
+                {
+                    <MudText Typo="Typo.body2">@context.Size @context.Color</MudText>
+                }
+                else
+                {
+                    <MudText Typo="Typo.caption" Color="Color.Tertiary">—</MudText>
+                }
+            </MudTd>
+            <MudTd DataLabel="Sucursal">
+                @(string.IsNullOrEmpty(context.BranchName) ? "—" : context.BranchName)
+            </MudTd>
+            <MudTd DataLabel="Stock Actual">
+                <MudChip T="string" Color="@(context.CurrentStock > 5 ? Color.Success : context.CurrentStock > 0 ? Color.Warning : Color.Error)" Size="Size.Small">
+                    @context.CurrentStock
+                </MudChip>
+            </MudTd>
+            <MudTd DataLabel="Precio Venta">
+                <MudText Typo="Typo.body2">₡@context.Price.ToString("N2")</MudText>
+            </MudTd>
+            <MudTd>
+                <MudTooltip Text="Ajustar existencias">
+                    <MudIconButton Icon="@Icons.Material.Filled.AddBox" Color="Color.Primary"
+                                   OnClick="@(() => AdjustStock(context))" Size="Size.Small" />
+                </MudTooltip>
+                <MudTooltip Text="Editar precio">
+                    <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Secondary"
+                                   OnClick="@(() => EditVariant(context))" Size="Size.Small" />
+                </MudTooltip>
+            </MudTd>
+        </RowTemplate>
+        <NoRecordsContent>
+            <MudText>No hay registros de inventario. Crea productos y luego ajusta el stock.</MudText>
+        </NoRecordsContent>
+        <LoadingContent>
+            <MudText>Cargando inventario...</MudText>
+        </LoadingContent>
+        <PagerContent>
+            <MudTablePager />
+        </PagerContent>
+    </MudTable>
+</MudPaper>
+
+@code {
+    private List<StockItemViewModel> allItems = new();
+    private List<StockItemViewModel> filteredItems = new();
+    private List<BranchDto> branches = new();
+    private bool loading = true;
+    private Guid? selectedBranchId;
+    private string searchString = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadBranches();
+        await LoadData();
+    }
+
+    private async Task LoadBranches()
+    {
+        try { branches = await Http.GetFromJsonAsync<List<BranchDto>>("api/v1/settings/branches") ?? new(); }
+        catch { }
+    }
+
+    private async Task LoadData()
+    {
+        loading = true;
+        try
+        {
+            // Load inventory balances
+            string url = "api/v1/inventory/balances";
+            if (selectedBranchId.HasValue) url += $"?branchId={selectedBranchId.Value}";
+            var balances = await Http.GetFromJsonAsync<List<InventoryBalanceDto>>(url) ?? new();
+
+            // Load all product variants to show even those with no stock
+            var products = await Http.GetFromJsonAsync<List<ProductListDto>>("api/v1/catalog/products") ?? new();
+
+            // Build view model: merge balances with all variants
+            var items = new List<StockItemViewModel>();
+
+            foreach (var product in products)
+            {
+                foreach (var variant in product.Variants)
+                {
+                    // Find matching balance(s)
+                    var matchingBalances = balances.Where(b => b.ProductVariantId == variant.Id).ToList();
+
+                    if (matchingBalances.Any())
+                    {
+                        foreach (var balance in matchingBalances)
+                        {
+                            items.Add(new StockItemViewModel
+                            {
+                                VariantId = variant.Id,
+                                ProductName = product.Name,
+                                Sku = variant.Sku,
+                                Barcode = variant.Barcode,
+                                Size = variant.Size,
+                                Color = variant.Color,
+                                BranchId = balance.BranchId,
+                                BranchName = balance.BranchName,
+                                CurrentStock = balance.CurrentStock,
+                                Price = variant.Price
+                            });
+                        }
+                    }
+                    else if (!selectedBranchId.HasValue)
+                    {
+                        // Show products with no stock when no branch filter
+                        items.Add(new StockItemViewModel
+                        {
+                            VariantId = variant.Id,
+                            ProductName = product.Name,
+                            Sku = variant.Sku,
+                            Barcode = variant.Barcode,
+                            Size = variant.Size,
+                            Color = variant.Color,
+                            BranchId = selectedBranchId ?? Guid.Empty,
+                            BranchName = "",
+                            CurrentStock = 0,
+                            Price = variant.Price
+                        });
+                    }
+                }
+            }
+
+            allItems = items;
+            FilterItems();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add("Error al cargar inventario: " + ex.Message, Severity.Error);
+        }
+        finally { loading = false; }
+    }
+
+    private async Task OnBranchChanged(Guid? branchId)
+    {
+        selectedBranchId = branchId;
+        await LoadData();
+    }
+
+    private void OnSearchChanged(string text)
+    {
+        searchString = text;
+        FilterItems();
+    }
+
+    private void FilterItems()
+    {
+        if (string.IsNullOrWhiteSpace(searchString))
+        {
+            filteredItems = allItems;
+        }
+        else
+        {
+            filteredItems = allItems.Where(x =>
+                x.ProductName.Contains(searchString, StringComparison.OrdinalIgnoreCase) ||
+                x.Sku.Contains(searchString, StringComparison.OrdinalIgnoreCase) ||
+                x.Barcode.Contains(searchString, StringComparison.OrdinalIgnoreCase)
+            ).ToList();
+        }
+    }
+
+    private async Task AdjustStock(StockItemViewModel item)
+    {
+        if (branches.Count == 0)
+        {
+            Snackbar.Add("Primero configure al menos una sucursal.", Severity.Warning);
+            return;
+        }
+        var branchId = item.BranchId != Guid.Empty ? item.BranchId : branches.First().Id;
+        var parameters = new DialogParameters
+        {
+            ["ProductVariantId"] = item.VariantId,
+            ["BranchId"] = branchId,
+            ["ProductName"] = item.ProductName,
+            ["CurrentStock"] = item.CurrentStock
+        };
+        var dialog = await DialogService.ShowAsync<InventoryAdjustmentDialog>($"Ajustar Stock — {item.ProductName}", parameters);
+        var result = await dialog.Result;
+        if (!result.Canceled) await LoadData();
+    }
+
+    private async Task EditVariant(StockItemViewModel item)
+    {
+        var parameters = new DialogParameters
+        {
+            ["VariantId"] = item.VariantId,
+            ["Sku"] = item.Sku,
+            ["Barcode"] = item.Barcode,
+            ["Size"] = item.Size,
+            ["VariantColor"] = item.Color,
+            ["Price"] = item.Price
+        };
+        var options = new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true };
+        var dialog = await DialogService.ShowAsync<NexusERP.WebDashboard.Pages.Catalog.ProductVariantEditDialog>("Editar Precio/Variante", parameters, options);
+        var result = await dialog.Result;
+        if (!result.Canceled) await LoadData();
+    }
+
+    // ViewModels
+    public class StockItemViewModel
+    {
+        public Guid VariantId { get; set; }
+        public string ProductName { get; set; } = string.Empty;
+        public string Sku { get; set; } = string.Empty;
+        public string Barcode { get; set; } = string.Empty;
+        public string Size { get; set; } = string.Empty;
+        public string Color { get; set; } = string.Empty;
+        public Guid BranchId { get; set; }
+        public string BranchName { get; set; } = string.Empty;
+        public decimal CurrentStock { get; set; }
+        public decimal Price { get; set; }
+    }
+
+    public class ProductListDto
+    {
+        public Guid Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public List<VariantListDto> Variants { get; set; } = new();
+    }
+
+    public class VariantListDto
+    {
+        public Guid Id { get; set; }
+        public string Sku { get; set; } = string.Empty;
+        public string Barcode { get; set; } = string.Empty;
+        public string Size { get; set; } = string.Empty;
+        public string Color { get; set; } = string.Empty;
+        public decimal Price { get; set; }
+    }
+}

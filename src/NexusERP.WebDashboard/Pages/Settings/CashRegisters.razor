@@ -18,23 +18,38 @@
         <HeaderContent>
             <MudTh>Sucursal</MudTh>
             <MudTh>Nombre</MudTh>
-            <MudTh>MAC</MudTh>
             <MudTh>Estado</MudTh>
-            <MudTh>Abierta</MudTh>
+            <MudTh>Sesión</MudTh>
+            <MudTh>Acciones</MudTh>
         </HeaderContent>
         <RowTemplate>
             <MudTd DataLabel="Sucursal">@context.BranchName</MudTd>
             <MudTd DataLabel="Nombre">@context.Name</MudTd>
-            <MudTd DataLabel="MAC"><code>@context.MacAddress</code></MudTd>
             <MudTd DataLabel="Estado">
                 <MudChip T="string" Size="Size.Small" Color="@(context.IsActive ? Color.Success : Color.Error)">
                     @(context.IsActive ? "Activa" : "Inactiva")
                 </MudChip>
             </MudTd>
-            <MudTd DataLabel="Abierta">
+            <MudTd DataLabel="Sesión">
                 <MudChip T="string" Size="Size.Small" Color="@(context.IsOpen ? Color.Warning : Color.Default)">
                     @(context.IsOpen ? "Abierta" : "Cerrada")
                 </MudChip>
+            </MudTd>
+            <MudTd DataLabel="Acciones">
+                @if (!context.IsOpen)
+                {
+                    <MudButton Variant="Variant.Filled" Color="Color.Success" Size="Size.Small"
+                               OnClick="() => OpenSession(context)">
+                        Abrir Sesión
+                    </MudButton>
+                }
+                else
+                {
+                    <MudButton Variant="Variant.Filled" Color="Color.Error" Size="Size.Small"
+                               OnClick="() => CloseSession(context)">
+                        Cerrar Sesión
+                    </MudButton>
+                }
             </MudTd>
         </RowTemplate>
         <NoRecordsContent>
@@ -61,6 +76,32 @@
     {
         var options = new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Small, FullWidth = true };
         var dialog = await DialogService.ShowAsync<CashRegisterCreateDialog>("Nueva Caja Registradora", options);
+        var result = await dialog.Result;
+        if (!result.Canceled) await LoadCashRegisters();
+    }
+
+    private async Task OpenSession(CashRegisterDto register)
+    {
+        var parameters = new DialogParameters
+        {
+            { "CashRegisterName", register.Name },
+            { "CashRegisterId", register.Id }
+        };
+        var options = new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Small, FullWidth = true };
+        var dialog = await DialogService.ShowAsync<OpenSessionDialog>("Abrir Sesión de Caja", parameters, options);
+        var result = await dialog.Result;
+        if (!result.Canceled) await LoadCashRegisters();
+    }
+
+    private async Task CloseSession(CashRegisterDto register)
+    {
+        var parameters = new DialogParameters
+        {
+            { "CashRegisterName", register.Name },
+            { "CashRegisterId", register.Id }
+        };
+        var options = new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Small, FullWidth = true };
+        var dialog = await DialogService.ShowAsync<CloseSessionDialog>("Cerrar Sesión de Caja", parameters, options);
         var result = await dialog.Result;
         if (!result.Canceled) await LoadCashRegisters();
     }
