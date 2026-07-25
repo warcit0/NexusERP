@@ -7,6 +7,8 @@ namespace NexusERP.Application.Sales.Queries.GetSales;
 public class GetSalesQuery : IRequest<List<SaleSummaryDto>>
 {
     public Guid? BranchId { get; set; }
+    public DateTime? StartDate { get; set; }
+    public DateTime? EndDate { get; set; }
 }
 
 public class SaleSummaryDto

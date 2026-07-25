@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using NexusERP.Application.Reports.Queries.GetSalesReport;
 using NexusERP.Application.Reports.Queries.GetCriticalInventoryReport;
+using NexusERP.Application.Reports.Queries.GetDashboardSummary;
+using NexusERP.Application.Reports.Queries.GetReceivablesAging;
 using ClosedXML.Excel;
 using System.IO;
 
@@ -18,6 +20,12 @@ public class ReportsController : ControllerBase
     public ReportsController(IMediator mediator)
     {
         _mediator = mediator;
+    }
+
+    [HttpGet("dashboard")]
+    public async Task<ActionResult<DashboardSummaryDto>> GetDashboard()
+    {
+        return Ok(await _mediator.Send(new GetDashboardSummaryQuery()));
     }
 
     [HttpGet("sales")]
@@ -71,5 +79,11 @@ public class ReportsController : ControllerBase
     public async Task<ActionResult<List<CriticalInventoryDto>>> GetCriticalInventory([FromQuery] decimal threshold = 10)
     {
         return Ok(await _mediator.Send(new GetCriticalInventoryReportQuery(threshold)));
+    }
+
+    [HttpGet("receivables/aging")]
+    public async Task<ActionResult<ReceivablesAgingDto>> GetReceivablesAging()
+    {
+        return Ok(await _mediator.Send(new GetReceivablesAgingQuery()));
     }
 }

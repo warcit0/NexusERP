@@ -22,6 +22,12 @@ public class GetSalesQueryHandler : IRequestHandler<GetSalesQuery, List<SaleSumm
         if (request.BranchId.HasValue)
             query = query.Where(s => s.BranchId == request.BranchId.Value);
 
+        if (request.StartDate.HasValue)
+            query = query.Where(s => s.Date >= request.StartDate.Value.Date);
+
+        if (request.EndDate.HasValue)
+            query = query.Where(s => s.Date < request.EndDate.Value.Date.AddDays(1));
+
         return await query
             .OrderByDescending(s => s.Date)
             .Select(s => new SaleSummaryDto

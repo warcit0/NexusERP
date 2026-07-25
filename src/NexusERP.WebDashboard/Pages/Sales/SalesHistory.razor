@@ -5,17 +5,33 @@
 @using NexusERP.WebDashboard.Models.Settings
 @inject HttpClient Http
 @inject ISnackbar Snackbar
+@inject IDialogService DialogService
 @attribute [Authorize]
 
 <MudText Typo="Typo.h5" Class="mb-4">Historial de Ventas</MudText>
 
 <MudPaper Class="pa-4 mb-4">
-    <MudSelect T="Guid?" Label="Filtrar por Sucursal" Value="selectedBranchId" ValueChanged="OnBranchChanged" Clearable="true">
-        @foreach (var branch in branches)
-        {
-            <MudSelectItem T="Guid?" Value="@branch.Id">@branch.Name</MudSelectItem>
-        }
-    </MudSelect>
+    <MudGrid>
+        <MudItem xs="12" md="3">
+            <MudSelect T="Guid?" Label="Filtrar por Sucursal" Value="selectedBranchId" ValueChanged="OnBranchChanged" Clearable="true">
+                @foreach (var branch in branches)
+                {
+                    <MudSelectItem T="Guid?" Value="@branch.Id">@branch.Name</MudSelectItem>
+                }
+            </MudSelect>
+        </MudItem>
+        <MudItem xs="12" md="3">
+            <MudDatePicker Label="Desde" @bind-Date="startDate" Clearable="true" />
+        </MudItem>
+        <MudItem xs="12" md="3">
+            <MudDatePicker Label="Hasta" @bind-Date="endDate" Clearable="true" />
+        </MudItem>
+        <MudItem xs="12" md="3" Class="d-flex align-center">
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="LoadSales" StartIcon="@Icons.Material.Filled.Search">
+                Buscar
+            </MudButton>
+        </MudItem>
+    </MudGrid>
 </MudPaper>
 
 <MudPaper Class="pa-4">
@@ -26,6 +42,7 @@
             <MudTh>Cliente</MudTh>
             <MudTh Style="text-align: right">Total</MudTh>
             <MudTh>Estado</MudTh>
+            <MudTh>Detalle</MudTh>
         </HeaderContent>
         <RowTemplate>
             <MudTd DataLabel="Fecha">@context.Date.ToLocalTime().ToString("g")</MudTd>
@@ -37,6 +54,10 @@
                     @context.Status
                 </MudChip>
             </MudTd>
+            <MudTd>
+                <MudIconButton Icon="@Icons.Material.Filled.Visibility" Size="Size.Small" Color="Color.Info"
+                               OnClick="@(() => OpenDetailDialog(context.Id))" Title="Ver Detalle" />
+            </MudTd>
         </RowTemplate>
         <NoRecordsContent>
             <MudText>No hay ventas registradas.</MudText>
@@ -44,6 +65,14 @@
         <LoadingContent>
             <MudText>Cargando historial...</MudText>
         </LoadingContent>
+        <FooterContent>
+            @if (sales.Any())
+            {
+                <MudTd colspan="3"><strong>Total del período</strong></MudTd>
+                <MudTd Style="text-align: right"><strong>@sales.Sum(s => s.Total).ToString("C")</strong></MudTd>
+                <MudTd colspan="2"></MudTd>
+            }
+        </FooterContent>
         <PagerContent>
             <MudTablePager />
         </PagerContent>
@@ -55,6 +84,8 @@
     private List<BranchDto> branches = new();
     private bool loading = true;
     private Guid? selectedBranchId;
+    private DateTime? startDate = DateTime.Today.AddDays(-30);
+    private DateTime? endDate = DateTime.Today;
 
     protected override async Task OnInitializedAsync()
     {
@@ -64,10 +95,7 @@
 
     private async Task LoadBranches()
     {
-        try
-        {
-            branches = await Http.GetFromJsonAsync<List<BranchDto>>("api/v1/settings/branches") ?? new();
-        }
+        try { branches = await Http.GetFromJsonAsync<List<BranchDto>>("api/v1/settings/branches") ?? new(); }
         catch (Exception) { }
     }
 
@@ -76,11 +104,13 @@
         loading = true;
         try
         {
-            string url = "api/v1/sales";
-            if (selectedBranchId.HasValue)
-            {
-                url += $"?branchId={selectedBranchId.Value}";
-            }
+            var url = "api/v1/sales";
+            var queryParams = new List<string>();
+            if (selectedBranchId.HasValue) queryParams.Add($"branchId={selectedBranchId.Value}");
+            if (startDate.HasValue)        queryParams.Add($"startDate={startDate.Value:yyyy-MM-dd}");
+            if (endDate.HasValue)          queryParams.Add($"endDate={endDate.Value:yyyy-MM-dd}");
+            if (queryParams.Any())         url += "?" + string.Join("&", queryParams);
+
             sales = await Http.GetFromJsonAsync<List<SaleSummaryDto>>(url) ?? new();
         }
         catch (Exception ex)
@@ -97,5 +127,12 @@
     {
         selectedBranchId = branchId;
         await LoadSales();
+    }
+
+    private async Task OpenDetailDialog(Guid saleId)
+    {
+        var parameters = new DialogParameters { { "SaleId", saleId } };
+        var options = new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Large, FullWidth = true };
+        await DialogService.ShowAsync<SaleDetailDialog>("Detalle de Venta", parameters, options);
     }
 }

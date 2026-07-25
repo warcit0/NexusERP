@@ -1,0 +1,156 @@
+@inject HttpClient Http
+@inject ISnackbar Snackbar
+
+<MudDialog Style="min-width: 600px;">
+    <DialogContent>
+        @if (loading)
+        {
+            <MudProgressCircular Indeterminate="true" Color="Color.Primary" Class="d-flex mx-auto my-8" />
+        }
+        else if (detail != null)
+        {
+            <!-- Encabezado -->
+            <MudGrid Class="mb-4">
+                <MudItem xs="12" sm="6">
+                    <MudText Typo="Typo.caption" Class="mud-text-secondary">Recibo</MudText>
+                    <MudText Typo="Typo.h6" Class="font-weight-bold">@detail.ReceiptNumber</MudText>
+                </MudItem>
+                <MudItem xs="12" sm="6" Class="d-flex flex-column align-end">
+                    <MudChip T="string" Color="@(detail.Status == "Completada" ? Color.Success : Color.Warning)" Size="Size.Small">
+                        @detail.Status
+                    </MudChip>
+                    <MudText Typo="Typo.caption" Class="mud-text-secondary mt-1">@detail.Date.ToLocalTime().ToString("dd/MM/yyyy HH:mm")</MudText>
+                </MudItem>
+                <MudItem xs="12">
+                    <MudText Typo="Typo.body2">
+                        Cliente: <strong>@detail.CustomerName</strong>
+                    </MudText>
+                </MudItem>
+            </MudGrid>
+
+            <MudDivider Class="mb-3" />
+
+            <!-- Líneas de la venta -->
+            <MudText Typo="Typo.subtitle2" Class="mb-2">Productos</MudText>
+            <MudTable Items="@detail.Lines" Dense="true" Hover="true" Striped="true" Elevation="0">
+                <HeaderContent>
+                    <MudTh>Producto</MudTh>
+                    <MudTh>SKU</MudTh>
+                    <MudTh Style="text-align:right">Cant.</MudTh>
+                    <MudTh Style="text-align:right">P. Unit.</MudTh>
+                    <MudTh Style="text-align:right">IVA %</MudTh>
+                    <MudTh Style="text-align:right">Total</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd>@context.ProductName</MudTd>
+                    <MudTd><MudText Typo="Typo.caption">@context.Sku</MudText></MudTd>
+                    <MudTd Style="text-align:right">@context.Quantity</MudTd>
+                    <MudTd Style="text-align:right">@context.UnitPrice.ToString("C")</MudTd>
+                    <MudTd Style="text-align:right">@context.TaxPercentage %</MudTd>
+                    <MudTd Style="text-align:right"><strong>@context.Total.ToString("C")</strong></MudTd>
+                </RowTemplate>
+            </MudTable>
+
+            <!-- Totales -->
+            <div Class="d-flex flex-column align-end mt-3 pa-2" Style="border-top: 1px solid #e2e8f0;">
+                <div class="d-flex justify-space-between" style="width: 220px;">
+                    <MudText Typo="Typo.body2" Class="mud-text-secondary">Subtotal</MudText>
+                    <MudText Typo="Typo.body2">@detail.Subtotal.ToString("C")</MudText>
+                </div>
+                <div class="d-flex justify-space-between" style="width: 220px;">
+                    <MudText Typo="Typo.body2" Class="mud-text-secondary">Impuestos</MudText>
+                    <MudText Typo="Typo.body2">@detail.TaxTotal.ToString("C")</MudText>
+                </div>
+                <div class="d-flex justify-space-between mt-1" style="width: 220px;">
+                    <MudText Typo="Typo.subtitle1" Class="font-weight-bold">TOTAL</MudText>
+                    <MudText Typo="Typo.subtitle1" Class="font-weight-bold" Color="Color.Primary">@detail.Total.ToString("C")</MudText>
+                </div>
+            </div>
+
+            <!-- Pagos -->
+            @if (detail.Payments.Any())
+            {
+                <MudDivider Class="my-3" />
+                <MudText Typo="Typo.subtitle2" Class="mb-2">Pagos Registrados</MudText>
+                @foreach (var payment in detail.Payments)
+                {
+                    <div class="d-flex justify-space-between align-center pa-1">
+                        <div class="d-flex align-center gap-2">
+                            <MudIcon Icon="@Icons.Material.Filled.Payment" Size="Size.Small" Class="mud-text-secondary" />
+                            <MudText Typo="Typo.body2">@payment.PaymentMethod</MudText>
+                            @if (!string.IsNullOrEmpty(payment.Reference))
+                            {
+                                <MudText Typo="Typo.caption" Class="mud-text-secondary ml-2">(@payment.Reference)</MudText>
+                            }
+                        </div>
+                        <MudText Typo="Typo.body2" Class="font-weight-bold">@payment.Amount.ToString("C")</MudText>
+                    </div>
+                }
+            }
+        }
+        else
+        {
+            <MudAlert Severity="Severity.Error">No se pudo cargar el detalle de la venta.</MudAlert>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton Color="Color.Primary" OnClick="Close">Cerrar</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = null!;
+    [Parameter] public Guid SaleId { get; set; }
+
+    private SaleDetailDto? detail;
+    private bool loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        loading = true;
+        try
+        {
+            detail = await Http.GetFromJsonAsync<SaleDetailDto>($"api/v1/sales/{SaleId}");
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error al cargar detalle: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            loading = false;
+        }
+    }
+
+    private void Close() => MudDialog.Cancel();
+
+    public class SaleDetailDto
+    {
+        public Guid Id { get; set; }
+        public string ReceiptNumber { get; set; } = string.Empty;
+        public DateTime Date { get; set; }
+        public string CustomerName { get; set; } = string.Empty;
+        public string Status { get; set; } = string.Empty;
+        public decimal Subtotal { get; set; }
+        public decimal TaxTotal { get; set; }
+        public decimal Total { get; set; }
+        public List<SaleLineDto> Lines { get; set; } = new();
+        public List<SalePaymentDto> Payments { get; set; } = new();
+    }
+    public class SaleLineDto
+    {
+        public string ProductName { get; set; } = string.Empty;
+        public string Sku { get; set; } = string.Empty;
+        public decimal Quantity { get; set; }
+        public decimal UnitPrice { get; set; }
+        public decimal TaxPercentage { get; set; }
+        public decimal Subtotal { get; set; }
+        public decimal Total { get; set; }
+    }
+    public class SalePaymentDto
+    {
+        public string PaymentMethod { get; set; } = string.Empty;
+        public decimal Amount { get; set; }
+        public string Reference { get; set; } = string.Empty;
+    }
+}

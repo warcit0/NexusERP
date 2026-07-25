@@ -7,155 +7,188 @@
 
 <PageTitle>NexusERP | Dashboard</PageTitle>
 
-<MudText Typo="Typo.h4" Class="mb-4">Dashboard</MudText>
+<MudText Typo="Typo.h4" Class="mb-1">Dashboard</MudText>
+<MudText Typo="Typo.body2" Class="mud-text-secondary mb-6">@DateTime.Now.ToString("dddd, dd 'de' MMMM yyyy", new System.Globalization.CultureInfo("es-ES"))</MudText>
 
+@if (loading)
+{
+    <MudProgressLinear Color="MudBlazor.Color.Primary" Indeterminate="true" Class="mb-4" />
+}
+
+<!-- KPI Cards -->
 <MudGrid>
     <MudItem xs="12" sm="6" md="3">
-        <MudPaper Class="d-flex flex-row pt-6 pb-4" Style="height:100px;">
-            <MudIcon Icon="@Icons.Material.Filled.AttachMoney" Color="MudBlazor.Color.Primary" Class="mx-4" Style="width:54px; height:54px;"></MudIcon>
-            <div>
-                <MudText Typo="Typo.subtitle1" Class="mud-text-secondary mb-n1">Ventas Hoy</MudText>
-                <MudText Typo="Typo.h5">$1,200</MudText>
+        <MudPaper Class="pa-4" Style="border-left: 4px solid #2563eb; border-radius: 12px;">
+            <div class="d-flex justify-space-between align-center">
+                <div>
+                    <MudText Typo="Typo.caption" Class="mud-text-secondary">Ventas Hoy</MudText>
+                    <MudText Typo="Typo.h5" Class="font-weight-bold">@summary.SalesToday.ToString("C")</MudText>
+                    <MudText Typo="Typo.caption" Class="mud-text-secondary">@summary.TransactionsToday transacciones</MudText>
+                </div>
+                <MudIcon Icon="@Icons.Material.Filled.AttachMoney" Color="MudBlazor.Color.Primary" Style="font-size: 2.5rem; opacity: 0.3;" />
             </div>
         </MudPaper>
     </MudItem>
     <MudItem xs="12" sm="6" md="3">
-        <MudPaper Class="d-flex flex-row pt-6 pb-4" Style="height:100px;">
-            <MudIcon Icon="@Icons.Material.Filled.ShoppingCart" Color="MudBlazor.Color.Secondary" Class="mx-4" Style="width:54px; height:54px;"></MudIcon>
-            <div>
-                <MudText Typo="Typo.subtitle1" Class="mud-text-secondary mb-n1">Órdenes</MudText>
-                <MudText Typo="Typo.h5">45</MudText>
+        <MudPaper Class="pa-4" Style="border-left: 4px solid #16a34a; border-radius: 12px;">
+            <div class="d-flex justify-space-between align-center">
+                <div>
+                    <MudText Typo="Typo.caption" Class="mud-text-secondary">CxC Pendiente</MudText>
+                    <MudText Typo="Typo.h5" Class="font-weight-bold">@summary.TotalReceivablesPending.ToString("C")</MudText>
+                    @if (summary.OverdueReceivables > 0)
+                    {
+                        <MudChip T="string" Color="MudBlazor.Color.Error" Size="MudBlazor.Size.Small">@summary.OverdueReceivables vencidas</MudChip>
+                    }
+                    else
+                    {
+                        <MudText Typo="Typo.caption" Class="mud-text-secondary">Sin vencimientos</MudText>
+                    }
+                </div>
+                <MudIcon Icon="@Icons.Material.Filled.ArrowDownward" Color="MudBlazor.Color.Success" Style="font-size: 2.5rem; opacity: 0.3;" />
             </div>
         </MudPaper>
     </MudItem>
     <MudItem xs="12" sm="6" md="3">
-        <MudPaper Class="d-flex flex-row pt-6 pb-4" Style="height:100px;">
-            <MudIcon Icon="@Icons.Material.Filled.Store" Color="MudBlazor.Color.Success" Class="mx-4" Style="width:54px; height:54px;"></MudIcon>
-            <div>
-                <MudText Typo="Typo.subtitle1" Class="mud-text-secondary mb-n1">Sucursales</MudText>
-                <MudText Typo="Typo.h5">3</MudText>
+        <MudPaper Class="pa-4" Style="border-left: 4px solid #dc2626; border-radius: 12px;">
+            <div class="d-flex justify-space-between align-center">
+                <div>
+                    <MudText Typo="Typo.caption" Class="mud-text-secondary">CxP Pendiente</MudText>
+                    <MudText Typo="Typo.h5" Class="font-weight-bold">@summary.TotalPayablesPending.ToString("C")</MudText>
+                    @if (summary.OverduePayables > 0)
+                    {
+                        <MudChip T="string" Color="MudBlazor.Color.Error" Size="MudBlazor.Size.Small">@summary.OverduePayables vencidas</MudChip>
+                    }
+                    else
+                    {
+                        <MudText Typo="Typo.caption" Class="mud-text-secondary">Al día</MudText>
+                    }
+                </div>
+                <MudIcon Icon="@Icons.Material.Filled.ArrowUpward" Color="MudBlazor.Color.Error" Style="font-size: 2.5rem; opacity: 0.3;" />
             </div>
         </MudPaper>
     </MudItem>
     <MudItem xs="12" sm="6" md="3">
-        <MudPaper Class="d-flex flex-row pt-6 pb-4" Style="height:100px;">
-            <MudIcon Icon="@Icons.Material.Filled.People" Color="MudBlazor.Color.Warning" Class="mx-4" Style="width:54px; height:54px;"></MudIcon>
-            <div>
-                <MudText Typo="Typo.subtitle1" Class="mud-text-secondary mb-n1">Usuarios</MudText>
-                <MudText Typo="Typo.h5">12</MudText>
+        <MudPaper Class="pa-4" Style="@($"border-left: 4px solid {(summary.CriticalStockItems > 0 ? "#f59e0b" : "#7c3aed")}; border-radius: 12px;")">
+            <div class="d-flex justify-space-between align-center">
+                <div>
+                    <MudText Typo="Typo.caption" Class="mud-text-secondary">Stock Crítico</MudText>
+                    <MudText Typo="Typo.h5" Class="font-weight-bold">@summary.CriticalStockItems</MudText>
+                    <MudText Typo="Typo.caption" Class="mud-text-secondary">productos bajo mínimo</MudText>
+                </div>
+                <MudIcon Icon="@Icons.Material.Filled.Warning" Color="@(summary.CriticalStockItems > 0 ? MudBlazor.Color.Warning : MudBlazor.Color.Tertiary)" Style="font-size: 2.5rem; opacity: 0.3;" />
             </div>
         </MudPaper>
     </MudItem>
 </MudGrid>
 
-<MudText Typo="Typo.h5" Class="mt-8 mb-4">Resumen Financiero</MudText>
-<MudGrid>
-    <MudItem xs="12" sm="6">
-        <MudPaper Class="pa-4">
-            <div class="d-flex justify-space-between align-center">
-                <MudText Typo="Typo.h6">Cuentas por Cobrar (CxC)</MudText>
-                <MudIcon Icon="@Icons.Material.Filled.ArrowDownward" Color="MudBlazor.Color.Success" />
-            </div>
-            <MudText Typo="Typo.h3" Class="mt-2 text-success">@totalReceivables.ToString("C")</MudText>
-            <MudText Typo="Typo.body2" Class="mud-text-secondary mt-1">Dinero pendiente de cobro a clientes</MudText>
-        </MudPaper>
-    </MudItem>
-    <MudItem xs="12" sm="6">
-        <MudPaper Class="pa-4">
-            <div class="d-flex justify-space-between align-center">
-                <MudText Typo="Typo.h6">Cuentas por Pagar (CxP)</MudText>
-                <MudIcon Icon="@Icons.Material.Filled.ArrowUpward" Color="MudBlazor.Color.Error" />
-            </div>
-            <MudText Typo="Typo.h3" Class="mt-2 text-error">@totalPayables.ToString("C")</MudText>
-            <MudText Typo="Typo.body2" Class="mud-text-secondary mt-1">Deudas pendientes con proveedores</MudText>
-        </MudPaper>
-    </MudItem>
-</MudGrid>
-
-<MudText Typo="Typo.h5" Class="mt-8 mb-4">Métricas de Negocio</MudText>
-<MudGrid>
+<!-- Gráfico de ventas últimos 7 días -->
+<MudGrid Class="mt-6">
     <MudItem xs="12" md="8">
-        <MudPaper Class="pa-4">
-            <MudText Typo="Typo.h6" Class="mb-4">Ventas Últimos Días (Simulación)</MudText>
-            <ApexChart TItem="OrderData" Title="Ventas Diarias">
-                <ApexPointSeries TItem="OrderData"
-                                 Items="orders"
-                                 Name="Ingresos"
-                                 SeriesType="SeriesType.Area"
-                                 XValue="@(e => e.Date)"
-                                 YAggregate="@(e => e.Sum(e => e.Amount))" />
-            </ApexChart>
+        <MudPaper Class="pa-4" Style="border-radius: 12px;">
+            <MudText Typo="Typo.h6" Class="mb-4">Ventas — Últimos 7 Días</MudText>
+            @if (summary.Last7DaysSales.Any())
+            {
+                <ApexChart TItem="DailySalePoint" Options="chartOptions">
+                    <ApexPointSeries TItem="DailySalePoint"
+                                     Items="chartData"
+                                     Name="Ingresos"
+                                     SeriesType="SeriesType.Area"
+                                     XValue="@(e => e.Label)"
+                                     YAggregate="@(e => e.Sum(x => x.Total))" />
+                </ApexChart>
+            }
+            else
+            {
+                <MudAlert Severity="Severity.Info">No hay ventas registradas en los últimos 7 días.</MudAlert>
+            }
         </MudPaper>
     </MudItem>
     <MudItem xs="12" md="4">
-        <MudPaper Class="pa-4">
-            <MudText Typo="Typo.h6" Class="mb-4">Distribución por Sucursal</MudText>
-            <ApexChart TItem="BranchData" Title="Sucursales">
-                <ApexPointSeries TItem="BranchData"
-                                 Items="branches"
-                                 Name="Porcentaje"
-                                 SeriesType="SeriesType.Donut"
-                                 XValue="@(e => e.Name)"
-                                 YAggregate="@(e => e.Sum(e => e.Value))" />
-            </ApexChart>
+        <MudPaper Class="pa-4" Style="border-radius: 12px; height: 100%;">
+            <MudText Typo="Typo.h6" Class="mb-4">Resumen Semanal</MudText>
+            <MudList T="string" Dense="true">
+                @foreach (var day in summary.Last7DaysSales)
+                {
+                    <MudListItem T="string" Icon="@Icons.Material.Filled.CalendarToday">
+                        <div class="d-flex justify-space-between" style="width:100%">
+                            <MudText Typo="Typo.body2">@day.Label</MudText>
+                            <MudText Typo="Typo.body2" Class="font-weight-bold">@day.Total.ToString("C")</MudText>
+                        </div>
+                    </MudListItem>
+                }
+            </MudList>
+            <MudDivider Class="my-2" />
+            <div class="d-flex justify-space-between pa-2">
+                <MudText Typo="Typo.subtitle2">Total 7 días</MudText>
+                <MudText Typo="Typo.subtitle2" Class="font-weight-bold" Color="MudBlazor.Color.Primary">
+                    @summary.Last7DaysSales.Sum(x => x.Total).ToString("C")
+                </MudText>
+            </div>
         </MudPaper>
     </MudItem>
 </MudGrid>
 
 @code {
-    private decimal totalReceivables = 0;
-    private decimal totalPayables = 0;
-
-    private List<OrderData> orders = new();
-    private List<BranchData> branches = new();
+    private DashboardSummaryDto summary = new();
+    private bool loading = true;
+    private List<DailySalePoint> chartData = new();
+    private ApexChartOptions<DailySalePoint> chartOptions = new();
 
     protected override async Task OnInitializedAsync()
     {
-        // Cargar datos financieros
+        chartOptions = new ApexChartOptions<DailySalePoint>
+        {
+            Chart = new ApexCharts.Chart { Height = 250, Toolbar = new Toolbar { Show = false } },
+            Stroke = new Stroke { Curve = Curve.Smooth, Width = new List<double> { 3 } },
+            Fill = new Fill { Opacity = new List<double> { 0.15 } },
+            Xaxis = new XAxis { Labels = new XAxisLabels { Style = new AxisLabelStyle { FontSize = "11px" } } },
+            Yaxis = new List<YAxis> { new YAxis { Labels = new YAxisLabels { Formatter = "function(val) { return '$' + val.toLocaleString(); }" } } }
+        };
+
+        loading = true;
         try
         {
-            var receivables = await Http.GetFromJsonAsync<List<AccountsReceivableDto>>("api/finance/receivables");
-            if (receivables != null)
-                totalReceivables = receivables.Sum(r => r.BalanceDue);
-
-            var payables = await Http.GetFromJsonAsync<List<AccountsPayableDto>>("api/finance/payables");
-            if (payables != null)
-                totalPayables = payables.Sum(p => p.BalanceDue);
+            var result = await Http.GetFromJsonAsync<DashboardSummaryDto>("api/reports/dashboard");
+            if (result != null)
+            {
+                summary = result;
+                chartData = result.Last7DaysSales
+                    .Select(d => new DailySalePoint { Label = d.Label, Total = d.Total })
+                    .ToList();
+            }
         }
         catch
         {
-            // Omitimos errores por simplicidad en el dashboard
+            // Si falla, el dashboard queda con valores en 0 (mejor que mostrar error)
         }
-
-        // Generar datos falsos para el demo de los gráficos
-        orders = new List<OrderData>
+        finally
         {
-            new OrderData { Date = "Lunes", Amount = 1200 },
-            new OrderData { Date = "Martes", Amount = 1500 },
-            new OrderData { Date = "Miércoles", Amount = 900 },
-            new OrderData { Date = "Jueves", Amount = 2100 },
-            new OrderData { Date = "Viernes", Amount = 2800 },
-            new OrderData { Date = "Sábado", Amount = 3500 },
-            new OrderData { Date = "Domingo", Amount = 1100 }
-        };
-
-        branches = new List<BranchData>
-        {
-            new BranchData { Name = "Sede Norte", Value = 45 },
-            new BranchData { Name = "Sede Sur", Value = 30 },
-            new BranchData { Name = "Sede Este", Value = 25 }
-        };
+            loading = false;
+        }
     }
 
-    public class OrderData
+    public class DashboardSummaryDto
     {
-        public string Date { get; set; } = "";
-        public decimal Amount { get; set; }
+        public decimal SalesToday { get; set; }
+        public int TransactionsToday { get; set; }
+        public decimal TotalReceivablesPending { get; set; }
+        public int OverdueReceivables { get; set; }
+        public decimal TotalPayablesPending { get; set; }
+        public int OverduePayables { get; set; }
+        public int CriticalStockItems { get; set; }
+        public List<DailySaleDto> Last7DaysSales { get; set; } = new();
     }
 
-    public class BranchData
+    public class DailySaleDto
     {
-        public string Name { get; set; } = "";
-        public decimal Value { get; set; }
+        public string Label { get; set; } = string.Empty;
+        public decimal Total { get; set; }
+        public int Count { get; set; }
+    }
+
+    public class DailySalePoint
+    {
+        public string Label { get; set; } = string.Empty;
+        public decimal Total { get; set; }
     }
 }

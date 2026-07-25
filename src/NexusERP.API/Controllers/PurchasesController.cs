@@ -5,6 +5,7 @@ using NexusERP.Application.Purchases.Suppliers.Commands.CreateSupplier;
 using NexusERP.Application.Purchases.Suppliers.Commands.UpdateSupplier;
 using NexusERP.Application.Purchases.Suppliers.Queries.GetSuppliers;
 using NexusERP.Application.Purchases.Orders.Commands.CreatePurchaseOrder;
+using NexusERP.Application.Purchases.Orders.Commands.SendPurchaseOrder;
 using NexusERP.Application.Purchases.Orders.Queries.GetPurchaseOrders;
 using NexusERP.Application.Purchases.Orders.Queries.GetPurchaseOrderById;
 using NexusERP.Application.Purchases.Orders.Commands.ReceivePurchaseOrder;
@@ -80,5 +81,19 @@ public class PurchasesController : ControllerBase
 
         var result = await _mediator.Send(command);
         return Ok(result);
+    }
+
+    [HttpPost("orders/{id}/send")]
+    public async Task<ActionResult<bool>> SendPurchaseOrder(Guid id)
+    {
+        try
+        {
+            var result = await _mediator.Send(new SendPurchaseOrderCommand(id));
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { Error = ex.Message });
+        }
     }
 }

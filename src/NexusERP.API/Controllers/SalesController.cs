@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using NexusERP.Application.Sales.Commands.CreateSale;
 using NexusERP.Application.Sales.Queries.GetSales;
+using NexusERP.Application.Sales.Queries.GetSaleDetail;
 using NexusERP.Application.Sales.CashRegisterSessions.Commands.OpenCashRegisterSession;
 using NexusERP.Application.Sales.CashRegisterSessions.Commands.CloseCashRegisterSession;
 using NexusERP.Application.Sales.CashRegisterSessions.Queries.GetActiveSession;
@@ -22,9 +23,17 @@ public class SalesController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<ActionResult<List<SaleSummaryDto>>> Get([FromQuery] Guid? branchId)
+    public async Task<ActionResult<List<SaleSummaryDto>>> Get([FromQuery] Guid? branchId, [FromQuery] DateTime? startDate, [FromQuery] DateTime? endDate)
     {
-        return await _mediator.Send(new GetSalesQuery { BranchId = branchId });
+        return await _mediator.Send(new GetSalesQuery { BranchId = branchId, StartDate = startDate, EndDate = endDate });
+    }
+
+    [HttpGet("{id}")]
+    public async Task<ActionResult<SaleDetailDto>> GetDetail(Guid id)
+    {
+        var result = await _mediator.Send(new GetSaleDetailQuery(id));
+        if (result == null) return NotFound();
+        return Ok(result);
     }
 
     [HttpPost]

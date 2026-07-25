@@ -4,91 +4,296 @@
 @inject ISnackbar Snackbar
 @inject IJSRuntime JS
 
-<MudText Typo="Typo.h4" Class="mb-4">Reportes</MudText>
+<MudText Typo="Typo.h4" Class="mb-6">Reportes y Business Intelligence</MudText>
 
-<MudPaper Class="pa-4 mb-4">
-    <MudText Typo="Typo.h6">Filtros de Ventas</MudText>
-    <MudGrid Class="mt-2">
-        <MudItem xs="12" md="4">
-            <MudDatePicker Label="Fecha Inicio" @bind-Date="startDate" />
-        </MudItem>
-        <MudItem xs="12" md="4">
-            <MudDatePicker Label="Fecha Fin" @bind-Date="endDate" />
-        </MudItem>
-        <MudItem xs="12" md="4" Class="d-flex align-center">
-            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="LoadReport" Class="mr-2">Generar</MudButton>
-            <MudButton Variant="Variant.Outlined" Color="Color.Success" OnClick="ExportToExcel" StartIcon="@Icons.Custom.FileFormats.FileExcel">Exportar Excel</MudButton>
-        </MudItem>
-    </MudGrid>
-</MudPaper>
+<MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-4">
 
-@if (loading)
-{
-    <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
-}
-else if (salesData != null && salesData.Any())
-{
-    <MudTable Items="salesData" Dense="true" Hover="true">
-        <HeaderContent>
-            <MudTh>Fecha</MudTh>
-            <MudTh>Sucursal</MudTh>
-            <MudTh>Cant. Ventas</MudTh>
-            <MudTh>Ingresos Totales</MudTh>
-        </HeaderContent>
-        <RowTemplate>
-            <MudTd DataLabel="Fecha">@context.Date.ToString("yyyy-MM-dd")</MudTd>
-            <MudTd DataLabel="Sucursal">@context.BranchName</MudTd>
-            <MudTd DataLabel="Cant. Ventas">@context.TotalSales</MudTd>
-            <MudTd DataLabel="Ingresos Totales">@context.TotalRevenue.ToString("C")</MudTd>
-        </RowTemplate>
-    </MudTable>
-}
-else
-{
-    <MudAlert Severity="Severity.Info">No hay datos para las fechas seleccionadas.</MudAlert>
-}
+    <!-- TAB 1: VENTAS -->
+    <MudTabPanel Text="Ventas" Icon="@Icons.Material.Filled.ReceiptLong">
+        <MudPaper Class="pa-4 mb-4" Elevation="0">
+            <MudGrid>
+                <MudItem xs="12" md="4">
+                    <MudDatePicker Label="Fecha Inicio" @bind-Date="startDate" />
+                </MudItem>
+                <MudItem xs="12" md="4">
+                    <MudDatePicker Label="Fecha Fin" @bind-Date="endDate" />
+                </MudItem>
+                <MudItem xs="12" md="4" Class="d-flex align-center gap-2">
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="LoadSalesReport" StartIcon="@Icons.Material.Filled.Search">Generar</MudButton>
+                    <MudButton Variant="Variant.Outlined" Color="Color.Success" OnClick="ExportToExcel" StartIcon="@Icons.Custom.FileFormats.FileExcel">Excel</MudButton>
+                </MudItem>
+            </MudGrid>
+        </MudPaper>
+
+        @if (salesLoading)
+        {
+            <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+        }
+        else if (salesData.Any())
+        {
+            <!-- Summary cards -->
+            <MudGrid Class="mb-4">
+                <MudItem xs="12" sm="4">
+                    <MudPaper Class="pa-3 text-center" Style="background: linear-gradient(135deg,#1e3a5f,#2563eb); color:white; border-radius:12px;">
+                        <MudText Typo="Typo.caption">Total Ingresos</MudText>
+                        <MudText Typo="Typo.h5">@salesData.Sum(s => s.TotalRevenue).ToString("C")</MudText>
+                    </MudPaper>
+                </MudItem>
+                <MudItem xs="12" sm="4">
+                    <MudPaper Class="pa-3 text-center" Style="background: linear-gradient(135deg,#1a4731,#16a34a); color:white; border-radius:12px;">
+                        <MudText Typo="Typo.caption">Total Ventas</MudText>
+                        <MudText Typo="Typo.h5">@salesData.Sum(s => s.TotalSales)</MudText>
+                    </MudPaper>
+                </MudItem>
+                <MudItem xs="12" sm="4">
+                    <MudPaper Class="pa-3 text-center" Style="background: linear-gradient(135deg,#3b1f5e,#7c3aed); color:white; border-radius:12px;">
+                        <MudText Typo="Typo.caption">Ticket Promedio</MudText>
+                        <MudText Typo="Typo.h5">@(salesData.Sum(s => s.TotalSales) > 0 ? (salesData.Sum(s => s.TotalRevenue) / salesData.Sum(s => s.TotalSales)).ToString("C") : "$0")</MudText>
+                    </MudPaper>
+                </MudItem>
+            </MudGrid>
+
+            <MudTable Items="salesData" Dense="true" Hover="true" Striped="true">
+                <HeaderContent>
+                    <MudTh>Fecha</MudTh>
+                    <MudTh>Sucursal</MudTh>
+                    <MudTh Style="text-align:right">Cant. Ventas</MudTh>
+                    <MudTh Style="text-align:right">Ingresos Totales</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd DataLabel="Fecha">@context.Date.ToString("dd/MM/yyyy")</MudTd>
+                    <MudTd DataLabel="Sucursal">@context.BranchName</MudTd>
+                    <MudTd DataLabel="Cant. Ventas" Style="text-align:right">@context.TotalSales</MudTd>
+                    <MudTd DataLabel="Ingresos Totales" Style="text-align:right"><strong>@context.TotalRevenue.ToString("C")</strong></MudTd>
+                </RowTemplate>
+            </MudTable>
+        }
+        else
+        {
+            <MudAlert Severity="Severity.Info">No hay datos para las fechas seleccionadas.</MudAlert>
+        }
+    </MudTabPanel>
+
+    <!-- TAB 2: STOCK CRÍTICO -->
+    <MudTabPanel Text="Inventario Crítico" Icon="@Icons.Material.Filled.Warning">
+        <div class="d-flex align-center justify-space-between mb-4">
+            <MudText Typo="Typo.body1">Productos con menos de <strong>@criticalThreshold</strong> unidades en stock</MudText>
+            <div class="d-flex align-center gap-3">
+                <MudNumericField @bind-Value="criticalThreshold" Label="Umbral" Min="1" Max="100" Style="max-width:100px;" />
+                <MudButton Variant="Variant.Filled" Color="Color.Warning" OnClick="LoadCriticalStock">Actualizar</MudButton>
+            </div>
+        </div>
+
+        @if (criticalLoading)
+        {
+            <MudProgressCircular Color="Color.Warning" Indeterminate="true" />
+        }
+        else
+        {
+            <MudTable Items="criticalItems" Dense="true" Hover="true" Striped="true">
+                <HeaderContent>
+                    <MudTh>Producto</MudTh>
+                    <MudTh>SKU</MudTh>
+                    <MudTh>Sucursal</MudTh>
+                    <MudTh Style="text-align:right">Stock Actual</MudTh>
+                    <MudTh>Alerta</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd DataLabel="Producto">@context.ProductName</MudTd>
+                    <MudTd DataLabel="SKU"><MudText Typo="Typo.caption">@context.Sku</MudText></MudTd>
+                    <MudTd DataLabel="Sucursal">@context.BranchName</MudTd>
+                    <MudTd DataLabel="Stock" Style="text-align:right">
+                        <MudText Color="@(context.CurrentStock == 0 ? Color.Error : Color.Warning)" Class="font-weight-bold">
+                            @context.CurrentStock
+                        </MudText>
+                    </MudTd>
+                    <MudTd>
+                        <MudChip T="string" Color="@(context.CurrentStock == 0 ? Color.Error : Color.Warning)" Size="Size.Small">
+                            @(context.CurrentStock == 0 ? "SIN STOCK" : "CRÍTICO")
+                        </MudChip>
+                    </MudTd>
+                </RowTemplate>
+                <NoRecordsContent>
+                    <MudText Class="pa-4 text-center mud-text-secondary">✅ No hay productos con stock crítico.</MudText>
+                </NoRecordsContent>
+            </MudTable>
+        }
+    </MudTabPanel>
+
+    <!-- TAB 3: CxC AGING -->
+    <MudTabPanel Text="CxC Aging" Icon="@Icons.Material.Filled.AccountBalance">
+        @if (agingLoading)
+        {
+            <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+        }
+        else if (aging != null)
+        {
+            <MudText Typo="Typo.h6" Class="mb-4">Total Pendiente: <strong Color="Color.Error">@aging.TotalPending.ToString("C")</strong></MudText>
+            <MudGrid Class="mb-4">
+                @foreach (var bucket in aging.Buckets)
+                {
+                    var color = bucket.Label.StartsWith("Al día") ? "#16a34a"
+                              : bucket.Label.StartsWith("1 –")  ? "#2563eb"
+                              : bucket.Label.StartsWith("31 –") ? "#f59e0b"
+                              : bucket.Label.StartsWith("61 –") ? "#ea580c"
+                              : "#dc2626";
+                    <MudItem xs="12" sm="6" md="4" lg="2">
+                        <MudPaper Class="pa-3 text-center" Style="@($"border-top: 4px solid {color}; border-radius:8px;")">
+                            <MudText Typo="Typo.caption" Class="mud-text-secondary">@bucket.Label</MudText>
+                            <MudText Typo="Typo.h6" Class="font-weight-bold">@bucket.Amount.ToString("C")</MudText>
+                            <MudText Typo="Typo.caption">@bucket.Count cuentas</MudText>
+                        </MudPaper>
+                    </MudItem>
+                }
+            </MudGrid>
+        }
+    </MudTabPanel>
+
+    <!-- TAB 4: CxP por vencer -->
+    <MudTabPanel Text="CxP Pendientes" Icon="@Icons.Material.Filled.ArrowUpward">
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="LoadPayables" Class="mb-4" StartIcon="@Icons.Material.Filled.Refresh">Actualizar</MudButton>
+        @if (payablesLoading)
+        {
+            <MudProgressCircular Indeterminate="true" />
+        }
+        else
+        {
+            <MudTable Items="payableItems" Dense="true" Hover="true" Striped="true">
+                <HeaderContent>
+                    <MudTh>Proveedor</MudTh>
+                    <MudTh>Factura</MudTh>
+                    <MudTh>Vencimiento</MudTh>
+                    <MudTh Style="text-align:right">Saldo</MudTh>
+                    <MudTh>Estado</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd>@context.SupplierName</MudTd>
+                    <MudTd>@context.InvoiceNumber</MudTd>
+                    <MudTd>
+                        <span style="color: @(context.DueDate < DateTime.Now && context.Status != "Paid" ? "red" : "inherit")">
+                            @context.DueDate.ToString("dd/MM/yyyy")
+                        </span>
+                    </MudTd>
+                    <MudTd Style="text-align:right"><strong>@context.BalanceDue.ToString("C")</strong></MudTd>
+                    <MudTd>
+                        <MudChip T="string" Color="@GetPayableColor(context.Status, context.DueDate)" Size="Size.Small">
+                            @TranslateStatus(context.Status, context.DueDate)
+                        </MudChip>
+                    </MudTd>
+                </RowTemplate>
+                <NoRecordsContent>
+                    <MudText Class="pa-4 text-center">No hay cuentas por pagar pendientes.</MudText>
+                </NoRecordsContent>
+            </MudTable>
+        }
+    </MudTabPanel>
+
+</MudTabs>
 
 @code {
+    // --- Ventas ---
     private DateTime? startDate = DateTime.Today.AddDays(-30);
     private DateTime? endDate = DateTime.Today;
     private List<SalesReportItemDto> salesData = new();
-    private bool loading = false;
+    private bool salesLoading = false;
 
-    private async Task LoadReport()
+    // --- Stock Crítico ---
+    private decimal criticalThreshold = 10;
+    private List<CriticalInventoryDto> criticalItems = new();
+    private bool criticalLoading = false;
+
+    // --- CxC Aging ---
+    private AgingDto? aging;
+    private bool agingLoading = false;
+
+    // --- CxP ---
+    private List<AccountsPayableDto> payableItems = new();
+    private bool payablesLoading = false;
+
+    protected override async Task OnInitializedAsync()
     {
-        if (startDate == null || endDate == null)
-        {
-            Snackbar.Add("Seleccione rango de fechas", Severity.Warning);
-            return;
-        }
+        await Task.WhenAll(LoadSalesReport(), LoadCriticalStock(), LoadAging(), LoadPayables());
+    }
 
-        loading = true;
+    private async Task LoadSalesReport()
+    {
+        if (startDate == null || endDate == null) return;
+        salesLoading = true;
         try
         {
             var url = $"api/reports/sales?startDate={startDate.Value:yyyy-MM-dd}&endDate={endDate.Value:yyyy-MM-dd}";
-            var result = await Http.GetFromJsonAsync<List<SalesReportItemDto>>(url);
-            if (result != null)
-            {
-                salesData = result;
-            }
+            salesData = await Http.GetFromJsonAsync<List<SalesReportItemDto>>(url) ?? new();
         }
-        catch (Exception ex)
-        {
-            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
-        }
-        finally
-        {
-            loading = false;
-        }
+        catch (Exception ex) { Snackbar.Add($"Error ventas: {ex.Message}", Severity.Error); }
+        finally { salesLoading = false; }
+    }
+
+    private async Task LoadCriticalStock()
+    {
+        criticalLoading = true;
+        try { criticalItems = await Http.GetFromJsonAsync<List<CriticalInventoryDto>>($"api/reports/inventory/critical?threshold={criticalThreshold}") ?? new(); }
+        catch (Exception ex) { Snackbar.Add($"Error stock: {ex.Message}", Severity.Error); }
+        finally { criticalLoading = false; }
+    }
+
+    private async Task LoadAging()
+    {
+        agingLoading = true;
+        try { aging = await Http.GetFromJsonAsync<AgingDto>("api/reports/receivables/aging"); }
+        catch (Exception ex) { Snackbar.Add($"Error aging: {ex.Message}", Severity.Error); }
+        finally { agingLoading = false; }
+    }
+
+    private async Task LoadPayables()
+    {
+        payablesLoading = true;
+        try { payableItems = await Http.GetFromJsonAsync<List<AccountsPayableDto>>("api/finance/payables") ?? new(); }
+        catch (Exception ex) { Snackbar.Add($"Error CxP: {ex.Message}", Severity.Error); }
+        finally { payablesLoading = false; }
     }
 
     private async Task ExportToExcel()
     {
         if (startDate == null || endDate == null) return;
-
         var url = $"api/reports/sales/export/excel?startDate={startDate.Value:yyyy-MM-dd}&endDate={endDate.Value:yyyy-MM-dd}";
-        
-        // Forma sencilla de descargar el archivo generado
         await JS.InvokeVoidAsync("window.open", url, "_blank");
+    }
+
+    private MudBlazor.Color GetPayableColor(string status, DateTime dueDate)
+    {
+        if (status == "Paid") return MudBlazor.Color.Success;
+        if (dueDate < DateTime.Now) return MudBlazor.Color.Error;
+        if (status == "PartiallyPaid") return MudBlazor.Color.Warning;
+        return MudBlazor.Color.Default;
+    }
+
+    private string TranslateStatus(string status, DateTime dueDate)
+    {
+        if (status == "Paid") return "Pagado";
+        if (dueDate < DateTime.Now) return "Vencido";
+        if (status == "PartiallyPaid") return "Parcial";
+        return "Pendiente";
+    }
+
+    // DTOs locales
+    public class AgingDto
+    {
+        public List<AgingBucketDto> Buckets { get; set; } = new();
+        public decimal TotalPending { get; set; }
+    }
+    public class AgingBucketDto
+    {
+        public string Label { get; set; } = string.Empty;
+        public int Count { get; set; }
+        public decimal Amount { get; set; }
+    }
+    public class CriticalInventoryDto
+    {
+        public Guid ProductId { get; set; }
+        public string ProductName { get; set; } = string.Empty;
+        public string Sku { get; set; } = string.Empty;
+        public Guid BranchId { get; set; }
+        public string BranchName { get; set; } = string.Empty;
+        public decimal CurrentStock { get; set; }
     }
 }

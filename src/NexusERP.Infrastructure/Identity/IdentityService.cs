@@ -2,6 +2,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Identity;
 using NexusERP.Application.Auth.Commands.Login;
 using NexusERP.Application.Common.Interfaces;
+using NexusERP.Application.Identity.Queries.GetUsers;
 
 namespace NexusERP.Infrastructure.Identity;
 
@@ -128,5 +129,40 @@ public class IdentityService : IIdentityService
             TenantId = user.TenantId,
             Roles = (await _userManager.GetRolesAsync(user)).ToList()
         };
+    }
+
+    public async Task<List<UserDto>> GetUsersAsync()
+    {
+        var users = _userManager.Users.ToList();
+        var result = new List<UserDto>();
+        foreach (var user in users)
+        {
+            var roles = await _userManager.GetRolesAsync(user);
+            result.Add(new UserDto
+            {
+                Id = user.Id,
+                Email = user.Email ?? string.Empty,
+                UserName = user.UserName ?? string.Empty,
+                Role = roles.FirstOrDefault() ?? "Sin rol",
+                IsActive = !user.LockoutEnabled || user.LockoutEnd == null || user.LockoutEnd < DateTimeOffset.UtcNow
+            });
+        }
+        return result;
+    }
+
+    public async Task<bool> SetUserActiveAsync(string userId, bool isActive)
+    {
+        var user = await _userManager.FindByIdAsync(userId);
+        if (user == null) return false;
+
+        if (isActive)
+        {
+            await _userManager.SetLockoutEndDateAsync(user, null);
+        }
+        else
+        {
+            await _userManager.SetLockoutEndDateAsync(user, DateTimeOffset.MaxValue);
+        }
+        return true;
     }
 }

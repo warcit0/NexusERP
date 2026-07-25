@@ -1,0 +1,168 @@
+@page "/settings/users"
+@using Microsoft.AspNetCore.Authorization
+@using System.Net.Http.Json
+@inject HttpClient Http
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+@attribute [Authorize(Roles = "TenantAdmin,SuperAdmin")]
+
+<MudText Typo="Typo.h5" Class="mb-4">Gestión de Usuarios</MudText>
+
+<MudPaper Class="pa-4">
+    <MudToolBar DisablePadding="true" Class="mb-4">
+        <MudSpacer />
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.PersonAdd"
+                   OnClick="OpenCreateDialog">
+            Nuevo Usuario
+        </MudButton>
+    </MudToolBar>
+
+    <MudTable Items="@users" Loading="@loading" Hover="true" Striped="true" Dense="true">
+        <HeaderContent>
+            <MudTh>Email</MudTh>
+            <MudTh>Usuario</MudTh>
+            <MudTh>Rol</MudTh>
+            <MudTh>Estado</MudTh>
+            <MudTh>Acciones</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Email">@context.Email</MudTd>
+            <MudTd DataLabel="Usuario">@context.UserName</MudTd>
+            <MudTd DataLabel="Rol">
+                <MudChip T="string" Size="Size.Small"
+                         Color="@(context.Role == "TenantAdmin" || context.Role == "SuperAdmin" ? Color.Warning : Color.Info)">
+                    @context.Role
+                </MudChip>
+            </MudTd>
+            <MudTd DataLabel="Estado">
+                <MudChip T="string" Size="Size.Small" Color="@(context.IsActive ? Color.Success : Color.Error)">
+                    @(context.IsActive ? "Activo" : "Inactivo")
+                </MudChip>
+            </MudTd>
+            <MudTd>
+                @if (context.IsActive)
+                {
+                    <MudIconButton Icon="@Icons.Material.Filled.PersonOff" Color="Color.Error" Size="Size.Small"
+                                   Title="Desactivar" OnClick="@(() => ToggleActive(context, false))" />
+                }
+                else
+                {
+                    <MudIconButton Icon="@Icons.Material.Filled.PersonAdd" Color="Color.Success" Size="Size.Small"
+                                   Title="Activar" OnClick="@(() => ToggleActive(context, true))" />
+                }
+            </MudTd>
+        </RowTemplate>
+        <NoRecordsContent>
+            <MudText Class="pa-4 text-center mud-text-secondary">No hay usuarios registrados.</MudText>
+        </NoRecordsContent>
+    </MudTable>
+</MudPaper>
+
+<!-- Dialog para crear usuario -->
+<MudDialog @bind-Visible="showCreateDialog">
+    <TitleContent>Nuevo Usuario</TitleContent>
+    <DialogContent>
+        <MudForm @ref="form" @bind-IsValid="@formValid">
+            <MudTextField @bind-Value="newEmail" Label="Correo Electrónico" Required="true" InputType="InputType.Email" />
+            <MudTextField @bind-Value="newPassword" Label="Contraseña inicial" Required="true"
+                          InputType="@(showPassword ? InputType.Text : InputType.Password)"
+                          Adornment="Adornment.End"
+                          AdornmentIcon="@(showPassword ? Icons.Material.Filled.Visibility : Icons.Material.Filled.VisibilityOff)"
+                          OnAdornmentClick="@(() => showPassword = !showPassword)" />
+            <MudSelect @bind-Value="newRole" Label="Rol" Required="true">
+                <MudSelectItem Value="@("TenantUser")">Usuario</MudSelectItem>
+                <MudSelectItem Value="@("TenantAdmin")">Administrador</MudSelectItem>
+            </MudSelect>
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="@(() => showCreateDialog = false)" Disabled="@saving">Cancelar</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="CreateUser" Disabled="@(!formValid || saving)">
+            @if (saving) { <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" /> }
+            Crear Usuario
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    private List<UserDto> users = new();
+    private bool loading = true;
+
+    // Create dialog state
+    private bool showCreateDialog = false;
+    private bool showPassword = false;
+    private bool saving = false;
+    private bool formValid = false;
+    private MudForm form = null!;
+    private string newEmail = string.Empty;
+    private string newPassword = string.Empty;
+    private string newRole = "TenantUser";
+
+    protected override async Task OnInitializedAsync() => await LoadUsers();
+
+    private async Task LoadUsers()
+    {
+        loading = true;
+        try { users = await Http.GetFromJsonAsync<List<UserDto>>("api/v1/users") ?? new(); }
+        catch (Exception ex) { Snackbar.Add($"Error al cargar usuarios: {ex.Message}", Severity.Error); }
+        finally { loading = false; }
+    }
+
+    private void OpenCreateDialog()
+    {
+        newEmail = string.Empty;
+        newPassword = string.Empty;
+        newRole = "TenantUser";
+        showCreateDialog = true;
+    }
+
+    private async Task CreateUser()
+    {
+        await form.Validate();
+        if (!form.IsValid) return;
+
+        saving = true;
+        try
+        {
+            var payload = new { Email = newEmail, Password = newPassword, Role = newRole, TenantId = (Guid?)null };
+            var response = await Http.PostAsJsonAsync("api/v1/users", payload);
+            if (response.IsSuccessStatusCode)
+            {
+                Snackbar.Add("Usuario creado exitosamente.", Severity.Success);
+                showCreateDialog = false;
+                await LoadUsers();
+            }
+            else
+            {
+                var error = await response.Content.ReadAsStringAsync();
+                Snackbar.Add($"Error: {error}", Severity.Error);
+            }
+        }
+        catch (Exception ex) { Snackbar.Add($"Error: {ex.Message}", Severity.Error); }
+        finally { saving = false; }
+    }
+
+    private async Task ToggleActive(UserDto user, bool isActive)
+    {
+        try
+        {
+            var response = await Http.PatchAsJsonAsync($"api/v1/users/{user.Id}/active", new { IsActive = isActive });
+            if (response.IsSuccessStatusCode)
+            {
+                user.IsActive = isActive;
+                Snackbar.Add($"Usuario {(isActive ? "activado" : "desactivado")} correctamente.", Severity.Success);
+                StateHasChanged();
+            }
+        }
+        catch (Exception ex) { Snackbar.Add($"Error: {ex.Message}", Severity.Error); }
+    }
+
+    public class UserDto
+    {
+        public string Id { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public string UserName { get; set; } = string.Empty;
+        public string Role { get; set; } = string.Empty;
+        public bool IsActive { get; set; }
+    }
+}
