@@ -3,8 +3,10 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using NexusERP.Application.Finance.AccountsReceivable.Queries.GetAccountsReceivable;
 using NexusERP.Application.Finance.AccountsReceivable.Commands.RegisterCustomerPayment;
+using NexusERP.Application.Finance.AccountsReceivable.Queries.GetAccountPayments;
 using NexusERP.Application.Finance.AccountsPayable.Queries.GetAccountsPayable;
 using NexusERP.Application.Finance.AccountsPayable.Commands.RegisterSupplierPayment;
+using NexusERP.Application.Finance.AccountsPayable.Queries.GetAccountPayments;
 
 namespace NexusERP.API.Controllers;
 
@@ -37,6 +39,12 @@ public class FinanceController : ControllerBase
         return Ok(result);
     }
 
+    [HttpGet("receivables/{id}/payments")]
+    public async Task<ActionResult<List<CustomerPaymentDto>>> GetCustomerPayments(Guid id)
+    {
+        return Ok(await _mediator.Send(new GetCustomerPaymentsQuery(id)));
+    }
+
     // --- Cuentas por Pagar ---
     [HttpGet("payables")]
     public async Task<ActionResult<List<AccountsPayableDto>>> GetAccountsPayable()
@@ -52,5 +60,11 @@ public class FinanceController : ControllerBase
 
         var result = await _mediator.Send(command);
         return Ok(result);
+    }
+
+    [HttpGet("payables/{id}/payments")]
+    public async Task<ActionResult<List<SupplierPaymentDto>>> GetSupplierPayments(Guid id)
+    {
+        return Ok(await _mediator.Send(new GetSupplierPaymentsQuery(id)));
     }
 }

@@ -2,6 +2,7 @@ using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using NexusERP.Application.Purchases.Suppliers.Commands.CreateSupplier;
+using NexusERP.Application.Purchases.Suppliers.Commands.UpdateSupplier;
 using NexusERP.Application.Purchases.Suppliers.Queries.GetSuppliers;
 using NexusERP.Application.Purchases.Orders.Commands.CreatePurchaseOrder;
 using NexusERP.Application.Purchases.Orders.Queries.GetPurchaseOrders;
@@ -31,8 +32,23 @@ public class PurchasesController : ControllerBase
     [HttpPost("suppliers")]
     public async Task<ActionResult<Guid>> CreateSupplier(CreateSupplierCommand command)
     {
-        var id = await _mediator.Send(command);
-        return Ok(id);
+        var supplierId = await _mediator.Send(command);
+        return Ok(supplierId);
+    }
+
+    [HttpPut("suppliers/{id}")]
+    public async Task<ActionResult> UpdateSupplier(Guid id, UpdateSupplierCommand command)
+    {
+        if (id != command.Id) return BadRequest("El ID de la ruta no coincide con el comando.");
+        try
+        {
+            await _mediator.Send(command);
+            return NoContent();
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { Error = ex.Message });
+        }
     }
 
     [HttpGet("orders")]

@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using NexusERP.Application.Common.Interfaces;
 using NexusERP.Domain.Entities.Sales;
 using NexusERP.Domain.Entities.Inventory;
+using NexusERP.Domain.Entities.Finance;
 
 namespace NexusERP.Application.Sales.Commands.CreateSale;
 
@@ -74,7 +75,19 @@ public class CreateSaleCommandHandler : IRequestHandler<CreateSaleCommand, Guid>
                 Total = lineTotal
             });
 
-            // 4. Actualizar Kardex (Transacción de Salida)
+            // 4. Validar y Actualizar Saldo de Inventario
+            var balance = await _context.InventoryBalances
+                .FirstOrDefaultAsync(b => b.ProductVariantId == detail.ProductVariantId && b.BranchId == request.BranchId, cancellationToken);
+
+            if (balance == null || balance.CurrentStock < detail.Quantity)
+            {
+                throw new Exception($"Stock insuficiente para el producto '{detail.ProductName}'. Stock actual: {(balance?.CurrentStock ?? 0)}, Cantidad requerida: {detail.Quantity}");
+            }
+
+            balance.CurrentStock -= detail.Quantity;
+            balance.LastUpdated = DateTime.UtcNow;
+
+            // 5. Actualizar Kardex (Transacción de Salida)
             _context.InventoryTransactions.Add(new InventoryTransaction
             {
                 ProductVariantId = detail.ProductVariantId,
@@ -84,27 +97,6 @@ public class CreateSaleCommandHandler : IRequestHandler<CreateSaleCommand, Guid>
                 Reference = $"Venta {receiptNumber}",
                 TransactionDate = DateTime.UtcNow
             });
-
-            // 5. Actualizar Saldo de Inventario
-            var balance = await _context.InventoryBalances
-                .FirstOrDefaultAsync(b => b.ProductVariantId == detail.ProductVariantId && b.BranchId == request.BranchId, cancellationToken);
-
-            if (balance == null)
-            {
-                balance = new InventoryBalance
-                {
-                    ProductVariantId = detail.ProductVariantId,
-                    BranchId = request.BranchId,
-                    CurrentStock = -detail.Quantity, // Permitimos stock negativo
-                    LastUpdated = DateTime.UtcNow
-                };
-                _context.InventoryBalances.Add(balance);
-            }
-            else
-            {
-                balance.CurrentStock -= detail.Quantity;
-                balance.LastUpdated = DateTime.UtcNow;
-            }
         }
 
         sale.Subtotal = subtotal;
@@ -123,9 +115,45 @@ public class CreateSaleCommandHandler : IRequestHandler<CreateSaleCommand, Guid>
             });
         }
 
-        // Validación extra: Verificar que el pago cubra el total
+        // Validación extra: Verificar que el pago cubra el total o sea de crédito
         var totalPaid = request.Payments.Sum(p => p.Amount);
-        if (totalPaid < sale.Total)
+        var hasCreditPayment = request.Payments.Any(p => p.PaymentMethod == "Crédito");
+
+        if (hasCreditPayment)
+        {
+            if (request.CustomerId == null)
+                throw new Exception("Debe seleccionar un cliente para realizar una venta al crédito.");
+
+            var customer = await _context.Customers.FirstOrDefaultAsync(c => c.Id == request.CustomerId, cancellationToken);
+            if (customer == null)
+                throw new Exception("Cliente no encontrado.");
+
+            // Calcular deuda acumulada
+            var accumulatedDebt = await _context.AccountsReceivables
+                .Where(ar => ar.CustomerId == request.CustomerId && ar.Status != "Paid")
+                .SumAsync(ar => ar.BalanceDue, cancellationToken);
+
+            var creditAmount = request.Payments.Where(p => p.PaymentMethod == "Crédito").Sum(p => p.Amount);
+            
+            if (accumulatedDebt + creditAmount > customer.CreditLimit)
+            {
+                throw new Exception($"El límite de crédito del cliente ha sido excedido. Límite: {customer.CreditLimit:C}, Deuda Acumulada: {accumulatedDebt:C}, Crédito Solicitado: {creditAmount:C}");
+            }
+            
+            // Generar Cuenta por Cobrar
+            _context.AccountsReceivables.Add(new AccountsReceivable
+            {
+                CustomerId = customer.Id,
+                SaleId = sale.Id,
+                InvoiceNumber = receiptNumber,
+                IssueDate = DateTime.UtcNow,
+                DueDate = DateTime.UtcNow.AddDays(30), // Por defecto 30 días
+                OriginalAmount = creditAmount,
+                BalanceDue = creditAmount,
+                Status = "Pending"
+            });
+        }
+        else if (totalPaid < sale.Total)
         {
             throw new Exception("El monto pagado es menor al total de la venta.");
         }

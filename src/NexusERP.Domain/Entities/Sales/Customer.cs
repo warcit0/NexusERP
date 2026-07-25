@@ -7,6 +7,7 @@ public class Customer : TenantEntity
     public string Email { get; set; } = string.Empty;
     public string Phone { get; set; } = string.Empty;
     public string Address { get; set; } = string.Empty;
+    public decimal CreditLimit { get; set; } = 0;
     public bool IsActive { get; set; } = true;
 
     public ICollection<Sale> Sales { get; set; } = new List<Sale>();

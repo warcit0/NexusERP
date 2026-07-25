@@ -1,0 +1,77 @@
+@inject HttpClient Http
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <DialogContent>
+        <MudText Typo="Typo.body1" Class="mb-4">
+            Ingrese el monto real de efectivo que hay actualmente en la caja para realizar el arqueo.
+        </MudText>
+        
+        <MudAlert Severity="Severity.Info" Class="mb-4">
+            El sistema calculará automáticamente la diferencia con el efectivo esperado según las ventas del turno.
+        </MudAlert>
+
+        <MudForm @ref="form" @bind-IsValid="@success">
+            <MudNumericField @bind-Value="actualAmount" Label="Monto Físico Contado (Efectivo)" Format="C2" Min="0" Required="true" RequiredError="Debe ingresar un monto" Class="mb-3" />
+            <MudTextField @bind-Value="notes" Label="Notas o justificaciones (opcional)" Lines="2" />
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Disabled="@saving">Cancelar</MudButton>
+        <MudButton Color="Color.Error" Variant="Variant.Filled" OnClick="Submit" Disabled="@(!success || saving)">
+            @if (saving)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+            }
+            Cerrar Turno (Corte X/Z)
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = null!;
+    
+    [Parameter] public Guid SessionId { get; set; }
+
+    private MudForm form = null!;
+    private bool success = false;
+    private bool saving = false;
+    
+    private decimal actualAmount = 0;
+    private string notes = string.Empty;
+
+    private async Task Submit()
+    {
+        await form.Validate();
+        if (form.IsValid)
+        {
+            saving = true;
+            try
+            {
+                var command = new { SessionId, ActualAmount = actualAmount, Notes = notes };
+                var response = await Http.PostAsJsonAsync("api/v1/sales/sessions/close", command);
+                
+                if (response.IsSuccessStatusCode)
+                {
+                    Snackbar.Add("Turno cerrado y arqueo registrado correctamente.", Severity.Success);
+                    MudDialog.Close(DialogResult.Ok(true));
+                }
+                else
+                {
+                    var errorStr = await response.Content.ReadAsStringAsync();
+                    Snackbar.Add($"Error al cerrar la caja: {errorStr}", Severity.Error);
+                }
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add("Error de conexión: " + ex.Message, Severity.Error);
+            }
+            finally
+            {
+                saving = false;
+            }
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

@@ -64,10 +64,14 @@
             @if (context.BalanceDue > 0)
             {
                 <MudButton Variant="Variant.Filled" Color="MudBlazor.Color.Primary" Size="Size.Small"
-                           OnClick="@(() => OpenPaymentDialog(context))">
+                           OnClick="@(() => OpenPaymentDialog(context))" Class="mr-2">
                     Pagar
                 </MudButton>
             }
+            <MudButton Variant="Variant.Outlined" Color="MudBlazor.Color.Info" Size="Size.Small"
+                       OnClick="@(() => OpenHistoryDialog(context.Id))">
+                Historial
+            </MudButton>
         </MudTd>
     </RowTemplate>
     <NoRecordsContent>
@@ -120,6 +124,13 @@
         {
             await LoadPayables();
         }
+    }
+
+    private async Task OpenHistoryDialog(Guid accountId)
+    {
+        var parameters = new DialogParameters { { "AccountId", accountId }, { "IsPayable", true } };
+        var options = new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Medium, FullWidth = true };
+        await DialogService.ShowAsync<PaymentHistoryDialog>("Historial de Abonos", parameters, options);
     }
 
     private MudBlazor.Color GetStatusColor(string status, DateTime dueDate)

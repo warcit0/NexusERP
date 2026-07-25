@@ -20,6 +20,7 @@
             <MudTh>Email</MudTh>
             <MudTh>Teléfono</MudTh>
             <MudTh>Estado</MudTh>
+            <MudTh>Acciones</MudTh>
         </HeaderContent>
         <RowTemplate>
             <MudTd DataLabel="Nombre">@context.Name</MudTd>
@@ -30,6 +31,9 @@
                 <MudChip T="string" Color="@(context.IsActive ? Color.Success : Color.Error)" Size="Size.Small">
                     @(context.IsActive ? "Activo" : "Inactivo")
                 </MudChip>
+            </MudTd>
+            <MudTd DataLabel="Acciones">
+                <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" Size="Size.Small" OnClick="@(() => OpenEditDialog(context))" />
             </MudTd>
         </RowTemplate>
         <NoRecordsContent>
@@ -70,6 +74,19 @@
     {
         var options = new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Small, FullWidth = true };
         var dialog = await DialogService.ShowAsync<SupplierCreateDialog>("Nuevo Proveedor", options);
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+            await LoadSuppliers();
+        }
+    }
+
+    private async Task OpenEditDialog(SupplierDto supplier)
+    {
+        var parameters = new DialogParameters { { "Supplier", supplier } };
+        var options = new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Small, FullWidth = true };
+        var dialog = await DialogService.ShowAsync<SupplierEditDialog>("Editar Proveedor", parameters, options);
         var result = await dialog.Result;
 
         if (!result.Canceled)

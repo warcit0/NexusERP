@@ -1,0 +1,81 @@
+@inject HttpClient Http
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <DialogContent>
+        <MudTable Items="@payments" Loading="@loading" Hover="true" Striped="true" Dense="true" Class="mt-2">
+            <HeaderContent>
+                <MudTh>Fecha</MudTh>
+                <MudTh>Monto</MudTh>
+                <MudTh>Método</MudTh>
+                <MudTh>Referencia</MudTh>
+                <MudTh>Notas</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="Fecha">@context.PaymentDate.ToString("dd/MM/yyyy HH:mm")</MudTd>
+                <MudTd DataLabel="Monto"><strong>@context.Amount.ToString("C")</strong></MudTd>
+                <MudTd DataLabel="Método">@context.PaymentMethod</MudTd>
+                <MudTd DataLabel="Referencia">@context.Reference</MudTd>
+                <MudTd DataLabel="Notas">@context.Notes</MudTd>
+            </RowTemplate>
+            <NoRecordsContent>
+                <MudText Class="pa-4 text-center">No hay abonos registrados para esta cuenta.</MudText>
+            </NoRecordsContent>
+        </MudTable>
+    </DialogContent>
+    <DialogActions>
+        <MudButton Color="Color.Primary" OnClick="Close">Cerrar</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = null!;
+    
+    [Parameter] public Guid AccountId { get; set; }
+    [Parameter] public bool IsPayable { get; set; } // true para CxP, false para CxC
+
+    private List<PaymentDto> payments = new();
+    private bool loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadPayments();
+    }
+
+    private async Task LoadPayments()
+    {
+        loading = true;
+        try
+        {
+            var endpoint = IsPayable 
+                ? $"api/finance/payables/{AccountId}/payments"
+                : $"api/finance/receivables/{AccountId}/payments";
+                
+            var response = await Http.GetFromJsonAsync<List<PaymentDto>>(endpoint);
+            if (response != null)
+            {
+                payments = response;
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error al cargar historial: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            loading = false;
+        }
+    }
+
+    private void Close() => MudDialog.Cancel();
+
+    public class PaymentDto
+    {
+        public Guid Id { get; set; }
+        public decimal Amount { get; set; }
+        public DateTime PaymentDate { get; set; }
+        public string PaymentMethod { get; set; } = string.Empty;
+        public string Reference { get; set; } = string.Empty;
+        public string Notes { get; set; } = string.Empty;
+    }
+}

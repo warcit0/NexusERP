@@ -13,6 +13,7 @@ public class CashRegisterSession : TenantEntity
     public DateTime? ClosedAt { get; set; }
     public decimal? FinalAmount { get; set; }
     public decimal? ExpectedAmount { get; set; }
+    public decimal? Difference { get; set; }
     
     public string Notes { get; set; } = string.Empty;
     

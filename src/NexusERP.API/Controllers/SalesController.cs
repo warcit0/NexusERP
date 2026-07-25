@@ -3,6 +3,9 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using NexusERP.Application.Sales.Commands.CreateSale;
 using NexusERP.Application.Sales.Queries.GetSales;
+using NexusERP.Application.Sales.CashRegisterSessions.Commands.OpenCashRegisterSession;
+using NexusERP.Application.Sales.CashRegisterSessions.Commands.CloseCashRegisterSession;
+using NexusERP.Application.Sales.CashRegisterSessions.Queries.GetActiveSession;
 
 namespace NexusERP.API.Controllers;
 
@@ -31,6 +34,49 @@ public class SalesController : ControllerBase
         {
             var saleId = await _mediator.Send(command);
             return Ok(saleId);
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { Error = ex.Message });
+        }
+    }
+
+    [HttpPost("sessions/open")]
+    public async Task<ActionResult<Guid>> OpenSession(OpenCashRegisterSessionCommand command)
+    {
+        try
+        {
+            var sessionId = await _mediator.Send(command);
+            return Ok(sessionId);
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { Error = ex.Message });
+        }
+    }
+
+    [HttpPost("sessions/close")]
+    public async Task<ActionResult<bool>> CloseSession(CloseCashRegisterSessionCommand command)
+    {
+        try
+        {
+            var result = await _mediator.Send(command);
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(new { Error = ex.Message });
+        }
+    }
+
+    [HttpGet("sessions/active")]
+    public async Task<ActionResult<CashRegisterSessionDto?>> GetActiveSession([FromQuery] Guid cashRegisterId)
+    {
+        try
+        {
+            var session = await _mediator.Send(new GetActiveCashRegisterSessionQuery(cashRegisterId));
+            if (session == null) return NoContent();
+            return Ok(session);
         }
         catch (Exception ex)
         {

@@ -1,6 +1,7 @@
 @page "/settings/cash-registers"
 @using Microsoft.AspNetCore.Authorization
-@using System.Net.Http.Json
+@using NexusERP.WebDashboard.Models.Catalog
+@using NexusERP.WebDashboard.Pages.Sales
 @inject HttpClient Http
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
@@ -84,24 +85,30 @@
     {
         var parameters = new DialogParameters
         {
-            { "CashRegisterName", register.Name },
             { "CashRegisterId", register.Id }
         };
         var options = new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Small, FullWidth = true };
-        var dialog = await DialogService.ShowAsync<OpenSessionDialog>("Abrir Sesión de Caja", parameters, options);
+        var dialog = await DialogService.ShowAsync<OpenCashRegisterDialog>($"Abrir Turno: {register.Name}", parameters, options);
         var result = await dialog.Result;
         if (!result.Canceled) await LoadCashRegisters();
     }
 
     private async Task CloseSession(CashRegisterDto register)
     {
+        // Get the active session ID first
+        var sessionResponse = await Http.GetFromJsonAsync<CashRegisterSessionDto>($"api/v1/sales/sessions/active?cashRegisterId={register.Id}");
+        if (sessionResponse == null)
+        {
+            Snackbar.Add("No se encontró una sesión activa para esta caja.", Severity.Error);
+            return;
+        }
+
         var parameters = new DialogParameters
         {
-            { "CashRegisterName", register.Name },
-            { "CashRegisterId", register.Id }
+            { "SessionId", sessionResponse.Id }
         };
         var options = new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Small, FullWidth = true };
-        var dialog = await DialogService.ShowAsync<CloseSessionDialog>("Cerrar Sesión de Caja", parameters, options);
+        var dialog = await DialogService.ShowAsync<CloseCashRegisterDialog>($"Arqueo y Cierre: {register.Name}", parameters, options);
         var result = await dialog.Result;
         if (!result.Canceled) await LoadCashRegisters();
     }

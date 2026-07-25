@@ -139,7 +139,7 @@ else
             var openRegister = registers.FirstOrDefault(r => r.IsOpen); // Usar IsOpen que ahora viene del backend
             if (openRegister != null)
             {
-                var sessionResponse = await Http.GetFromJsonAsync<CashRegisterSessionDto>($"api/v1/settings/cashregisters/{openRegister.Id}/session");
+                var sessionResponse = await Http.GetFromJsonAsync<CashRegisterSessionDto>($"api/v1/sales/sessions/active?cashRegisterId={openRegister.Id}");
                 if (sessionResponse != null)
                 {
                     activeSession = sessionResponse;
@@ -222,7 +222,8 @@ else
 
         var parameters = new DialogParameters
         {
-            { "Total", cart.Sum(x => x.Total) }
+            { "Total", cart.Sum(x => x.Total) },
+            { "HasCustomer", selectedCustomerId.HasValue }
         };
 
         var options = new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Small, FullWidth = true };

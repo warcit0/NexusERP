@@ -8,6 +8,7 @@
             <MudSelectItem Value="@("Efectivo")">Efectivo</MudSelectItem>
             <MudSelectItem Value="@("Tarjeta")">Tarjeta</MudSelectItem>
             <MudSelectItem Value="@("SINPE")">Transferencia / SINPE</MudSelectItem>
+            <MudSelectItem Value="@("Crédito")" Disabled="!HasCustomer">Crédito (Requiere Cliente)</MudSelectItem>
         </MudSelect>
 
         @if (payment.PaymentMethod == "Efectivo")
@@ -33,6 +34,7 @@
     [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = null!;
     
     [Parameter] public decimal Total { get; set; }
+    [Parameter] public bool HasCustomer { get; set; }
     
     private PaymentModel payment = new() { PaymentMethod = "Efectivo" };
     private decimal cashReceived;
