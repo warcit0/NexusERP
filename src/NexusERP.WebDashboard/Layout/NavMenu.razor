@@ -36,4 +36,16 @@
         <MudNavLink Href="/inventory/stock" Icon="@Icons.Material.Filled.Warehouse">Kardex y Existencias</MudNavLink>
         <MudNavLink Href="/catalog/products" Icon="@Icons.Material.Filled.Category">Productos</MudNavLink>
     </MudNavGroup>
+
+    <MudNavGroup Title="Compras" Icon="@Icons.Material.Filled.LocalShipping" Expanded="true">
+        <MudNavLink Href="/purchases/suppliers" Icon="@Icons.Material.Filled.Business">Proveedores</MudNavLink>
+        <MudNavLink Href="/purchases/orders" Icon="@Icons.Material.Filled.Receipt">Órdenes de Compra</MudNavLink>
+    </MudNavGroup>
+
+    <MudNavGroup Title="Finanzas" Icon="@Icons.Material.Filled.AccountBalance" Expanded="true">
+        <MudNavLink Href="/finance/accounts-receivable" Icon="@Icons.Material.Filled.ArrowDownward">Cuentas por Cobrar</MudNavLink>
+        <MudNavLink Href="/finance/accounts-payable" Icon="@Icons.Material.Filled.ArrowUpward">Cuentas por Pagar</MudNavLink>
+    </MudNavGroup>
+
+    <MudNavLink Href="/reports" Icon="@Icons.Material.Filled.BarChart" Match="NavLinkMatch.Prefix">Reportes y BI</MudNavLink>
 </MudNavMenu>

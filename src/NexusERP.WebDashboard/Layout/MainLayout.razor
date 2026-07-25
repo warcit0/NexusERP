@@ -1,7 +1,10 @@
 @inherits LayoutComponentBase
 @using NexusERP.WebDashboard.Auth
+@using NexusERP.WebDashboard.Services
 @inject AuthenticationStateProvider AuthStateProvider
 @inject NavigationManager Navigation
+@inject NotificationService NotificationService
+@inject ISnackbar Snackbar
 
 <MudThemeProvider Theme="_currentTheme" />
 <MudDialogProvider />
@@ -56,5 +59,28 @@
         var authProvider = (CustomAuthStateProvider)AuthStateProvider;
         await authProvider.NotifyUserLoggedOut();
         Navigation.NavigateTo("/login", forceLoad: true);
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        NotificationService.OnNotificationReceived += HandleNotification;
+        
+        // Simular token (en un entorno real se extraería del AuthState)
+        string token = "dummy-token"; 
+        await NotificationService.InitializeAsync(token);
+    }
+
+    private void HandleNotification(string user, string message)
+    {
+        InvokeAsync(() =>
+        {
+            Snackbar.Add($"{user}: {message}", Severity.Info);
+            StateHasChanged();
+        });
+    }
+
+    public void Dispose()
+    {
+        NotificationService.OnNotificationReceived -= HandleNotification;
     }
 }

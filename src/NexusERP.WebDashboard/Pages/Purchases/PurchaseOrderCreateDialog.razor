@@ -1,0 +1,194 @@
+@using NexusERP.WebDashboard.Models
+@inject HttpClient Http
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <DialogContent>
+        <MudForm @ref="form" @bind-IsValid="@success">
+            <MudGrid>
+                <MudItem xs="12" sm="6">
+                    <MudSelect T="Guid?" Label="Proveedor" @bind-Value="command.SupplierId" Required="true" RequiredError="Debe seleccionar un proveedor">
+                        @foreach (var supplier in suppliers)
+                        {
+                            <MudSelectItem T="Guid?" Value="@supplier.Id">@supplier.Name</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudDatePicker Label="Fecha de Entrega Esperada" @bind-Date="expectedDate" Required="true" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="command.Notes" Label="Notas (Opcional)" Lines="2" />
+                </MudItem>
+            </MudGrid>
+            <MudDivider Class="my-4" />
+            <MudText Typo="Typo.h6">Productos</MudText>
+            
+            <MudGrid Class="align-center">
+                <MudItem xs="6">
+                    <MudSelect T="ProductVariantDto" Label="Buscar Producto" @bind-Value="selectedVariant">
+                        @foreach (var variant in productVariants)
+                        {
+                            <MudSelectItem Value="@variant">@variant.ProductName (@variant.Sku)</MudSelectItem>
+                        }
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="3">
+                    <MudNumericField @bind-Value="quantity" Label="Cantidad" Min="1" />
+                </MudItem>
+                <MudItem xs="3">
+                    <MudButton Variant="Variant.Filled" Color="Color.Secondary" OnClick="AddProduct" Disabled="@(selectedVariant == null)">Agregar</MudButton>
+                </MudItem>
+            </MudGrid>
+
+            @if (command.Details.Any())
+            {
+                <MudTable Items="command.Details" Dense="true" Class="mt-4">
+                    <HeaderContent>
+                        <MudTh>Producto</MudTh>
+                        <MudTh>SKU</MudTh>
+                        <MudTh>Cantidad</MudTh>
+                        <MudTh>Costo U.</MudTh>
+                        <MudTh>Subtotal</MudTh>
+                        <MudTh></MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd DataLabel="Producto">@context.ProductName</MudTd>
+                        <MudTd DataLabel="SKU">@context.Sku</MudTd>
+                        <MudTd DataLabel="Cantidad">@context.QuantityOrdered</MudTd>
+                        <MudTd DataLabel="Costo U.">
+                            <MudNumericField @bind-Value="context.UnitCost" Min="0" HideSpinButtons="true" />
+                        </MudTd>
+                        <MudTd DataLabel="Subtotal">@((context.QuantityOrdered * context.UnitCost).ToString("C"))</MudTd>
+                        <MudTd>
+                            <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small" OnClick="@(() => RemoveProduct(context))" />
+                        </MudTd>
+                    </RowTemplate>
+                </MudTable>
+            }
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancelar</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Submit" Disabled="@(!success || !command.Details.Any())">Crear Orden</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = null!;
+    
+    private MudForm form = null!;
+    private bool success = false;
+    private DateTime? expectedDate = DateTime.Today.AddDays(7);
+    
+    private CreatePurchaseOrderCommand command = new();
+    private List<SupplierDto> suppliers = new();
+    private List<ProductVariantDto> productVariants = new();
+    
+    private ProductVariantDto? selectedVariant;
+    private decimal quantity = 1;
+
+    protected override async Task OnInitializedAsync()
+    {
+        command.ExpectedDeliveryDate = expectedDate ?? DateTime.Today;
+        // Asignamos una sucursal por defecto para el demo (En real se saca del contexto del usuario)
+        command.BranchId = Guid.Parse("11111111-1111-1111-1111-111111111111");
+
+        try
+        {
+            var s = await Http.GetFromJsonAsync<List<SupplierDto>>("api/purchases/suppliers");
+            if (s != null) suppliers = s;
+
+            // Para los productos, podríamos llamar al catálogo
+            var p = await Http.GetFromJsonAsync<List<ProductVariantDto>>("api/v1/catalog/products/variants");
+            if (p != null) productVariants = p;
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add("Error cargando dependencias: " + ex.Message, Severity.Error);
+        }
+    }
+
+    private void AddProduct()
+    {
+        if (selectedVariant == null || quantity <= 0) return;
+
+        command.Details.Add(new PurchaseOrderDetailCommand
+        {
+            ProductVariantId = selectedVariant.Id,
+            ProductName = selectedVariant.ProductName,
+            Sku = selectedVariant.Sku,
+            QuantityOrdered = quantity,
+            UnitCost = selectedVariant.Price // Se usa precio base como costo para sugerir
+        });
+
+        selectedVariant = null;
+        quantity = 1;
+    }
+
+    private void RemoveProduct(PurchaseOrderDetailCommand detail)
+    {
+        command.Details.Remove(detail);
+    }
+
+    private async Task Submit()
+    {
+        await form.Validate();
+        if (form.IsValid && command.Details.Any())
+        {
+            command.ExpectedDeliveryDate = expectedDate ?? DateTime.Today;
+            try
+            {
+                var response = await Http.PostAsJsonAsync("api/purchases/orders", command);
+                if (response.IsSuccessStatusCode)
+                {
+                    Snackbar.Add("Orden de compra creada exitosamente", Severity.Success);
+                    MudDialog.Close(DialogResult.Ok(true));
+                }
+                else
+                {
+                    var errorStr = await response.Content.ReadAsStringAsync();
+                    Snackbar.Add($"Error: {errorStr}", Severity.Error);
+                }
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add("Error de conexión: " + ex.Message, Severity.Error);
+            }
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    public class CreatePurchaseOrderCommand
+    {
+        public Guid? SupplierId { get; set; }
+        public Guid BranchId { get; set; }
+        public DateTime ExpectedDeliveryDate { get; set; }
+        public string Notes { get; set; } = string.Empty;
+        public List<PurchaseOrderDetailCommand> Details { get; set; } = new();
+    }
+
+    public class PurchaseOrderDetailCommand
+    {
+        public Guid ProductVariantId { get; set; }
+        public string ProductName { get; set; } = string.Empty;
+        public string Sku { get; set; } = string.Empty;
+        public decimal QuantityOrdered { get; set; }
+        public decimal UnitCost { get; set; }
+    }
+
+    public class SupplierDto
+    {
+        public Guid Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+    }
+
+    public class ProductVariantDto
+    {
+        public Guid Id { get; set; }
+        public string ProductName { get; set; } = string.Empty;
+        public string Sku { get; set; } = string.Empty;
+        public decimal Price { get; set; }
+    }
+}

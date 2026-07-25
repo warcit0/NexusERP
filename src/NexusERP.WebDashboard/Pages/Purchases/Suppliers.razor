@@ -1,0 +1,91 @@
+@page "/purchases/suppliers"
+@inject HttpClient Http
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+
+<MudText Typo="Typo.h4" Class="mb-4">Proveedores</MudText>
+
+<MudPaper Class="pa-4">
+    <MudToolBar DisablePadding="true">
+        <MudSpacer />
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="OpenCreateDialog" StartIcon="@Icons.Material.Filled.Add">
+            Nuevo Proveedor
+        </MudButton>
+    </MudToolBar>
+
+    <MudTable Items="@suppliers" Dense="true" Hover="true" Loading="@loading" Striped="true" Class="mt-4">
+        <HeaderContent>
+            <MudTh>Nombre</MudTh>
+            <MudTh>RFC / Tax ID</MudTh>
+            <MudTh>Email</MudTh>
+            <MudTh>Teléfono</MudTh>
+            <MudTh>Estado</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Nombre">@context.Name</MudTd>
+            <MudTd DataLabel="RFC / Tax ID">@context.TaxId</MudTd>
+            <MudTd DataLabel="Email">@context.Email</MudTd>
+            <MudTd DataLabel="Teléfono">@context.Phone</MudTd>
+            <MudTd DataLabel="Estado">
+                <MudChip T="string" Color="@(context.IsActive ? Color.Success : Color.Error)" Size="Size.Small">
+                    @(context.IsActive ? "Activo" : "Inactivo")
+                </MudChip>
+            </MudTd>
+        </RowTemplate>
+        <NoRecordsContent>
+            <MudText>No se encontraron proveedores.</MudText>
+        </NoRecordsContent>
+    </MudTable>
+</MudPaper>
+
+@code {
+    private List<SupplierDto> suppliers = new();
+    private bool loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadSuppliers();
+    }
+
+    private async Task LoadSuppliers()
+    {
+        loading = true;
+        try
+        {
+            var response = await Http.GetFromJsonAsync<List<SupplierDto>>("api/purchases/suppliers");
+            if (response != null)
+                suppliers = response;
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add("Error al cargar proveedores: " + ex.Message, Severity.Error);
+        }
+        finally
+        {
+            loading = false;
+        }
+    }
+
+    private async Task OpenCreateDialog()
+    {
+        var options = new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Small, FullWidth = true };
+        var dialog = await DialogService.ShowAsync<SupplierCreateDialog>("Nuevo Proveedor", options);
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+            await LoadSuppliers();
+        }
+    }
+
+    public class SupplierDto
+    {
+        public Guid Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string TaxId { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public string Phone { get; set; } = string.Empty;
+        public string Address { get; set; } = string.Empty;
+        public bool IsActive { get; set; }
+    }
+}

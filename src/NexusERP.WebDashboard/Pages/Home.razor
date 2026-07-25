@@ -1,5 +1,8 @@
 @page "/"
 @using Microsoft.AspNetCore.Components.Authorization
+@using NexusERP.WebDashboard.Models
+@using ApexCharts
+@inject HttpClient Http
 @attribute [Authorize]
 
 <PageTitle>NexusERP | Dashboard</PageTitle>
@@ -9,7 +12,7 @@
 <MudGrid>
     <MudItem xs="12" sm="6" md="3">
         <MudPaper Class="d-flex flex-row pt-6 pb-4" Style="height:100px;">
-            <MudIcon Icon="@Icons.Material.Filled.AttachMoney" Color="Color.Primary" Class="mx-4" Style="width:54px; height:54px;"></MudIcon>
+            <MudIcon Icon="@Icons.Material.Filled.AttachMoney" Color="MudBlazor.Color.Primary" Class="mx-4" Style="width:54px; height:54px;"></MudIcon>
             <div>
                 <MudText Typo="Typo.subtitle1" Class="mud-text-secondary mb-n1">Ventas Hoy</MudText>
                 <MudText Typo="Typo.h5">$1,200</MudText>
@@ -18,7 +21,7 @@
     </MudItem>
     <MudItem xs="12" sm="6" md="3">
         <MudPaper Class="d-flex flex-row pt-6 pb-4" Style="height:100px;">
-            <MudIcon Icon="@Icons.Material.Filled.ShoppingCart" Color="Color.Secondary" Class="mx-4" Style="width:54px; height:54px;"></MudIcon>
+            <MudIcon Icon="@Icons.Material.Filled.ShoppingCart" Color="MudBlazor.Color.Secondary" Class="mx-4" Style="width:54px; height:54px;"></MudIcon>
             <div>
                 <MudText Typo="Typo.subtitle1" Class="mud-text-secondary mb-n1">Órdenes</MudText>
                 <MudText Typo="Typo.h5">45</MudText>
@@ -27,7 +30,7 @@
     </MudItem>
     <MudItem xs="12" sm="6" md="3">
         <MudPaper Class="d-flex flex-row pt-6 pb-4" Style="height:100px;">
-            <MudIcon Icon="@Icons.Material.Filled.Store" Color="Color.Success" Class="mx-4" Style="width:54px; height:54px;"></MudIcon>
+            <MudIcon Icon="@Icons.Material.Filled.Store" Color="MudBlazor.Color.Success" Class="mx-4" Style="width:54px; height:54px;"></MudIcon>
             <div>
                 <MudText Typo="Typo.subtitle1" Class="mud-text-secondary mb-n1">Sucursales</MudText>
                 <MudText Typo="Typo.h5">3</MudText>
@@ -36,7 +39,7 @@
     </MudItem>
     <MudItem xs="12" sm="6" md="3">
         <MudPaper Class="d-flex flex-row pt-6 pb-4" Style="height:100px;">
-            <MudIcon Icon="@Icons.Material.Filled.People" Color="Color.Warning" Class="mx-4" Style="width:54px; height:54px;"></MudIcon>
+            <MudIcon Icon="@Icons.Material.Filled.People" Color="MudBlazor.Color.Warning" Class="mx-4" Style="width:54px; height:54px;"></MudIcon>
             <div>
                 <MudText Typo="Typo.subtitle1" Class="mud-text-secondary mb-n1">Usuarios</MudText>
                 <MudText Typo="Typo.h5">12</MudText>
@@ -44,3 +47,115 @@
         </MudPaper>
     </MudItem>
 </MudGrid>
+
+<MudText Typo="Typo.h5" Class="mt-8 mb-4">Resumen Financiero</MudText>
+<MudGrid>
+    <MudItem xs="12" sm="6">
+        <MudPaper Class="pa-4">
+            <div class="d-flex justify-space-between align-center">
+                <MudText Typo="Typo.h6">Cuentas por Cobrar (CxC)</MudText>
+                <MudIcon Icon="@Icons.Material.Filled.ArrowDownward" Color="MudBlazor.Color.Success" />
+            </div>
+            <MudText Typo="Typo.h3" Class="mt-2 text-success">@totalReceivables.ToString("C")</MudText>
+            <MudText Typo="Typo.body2" Class="mud-text-secondary mt-1">Dinero pendiente de cobro a clientes</MudText>
+        </MudPaper>
+    </MudItem>
+    <MudItem xs="12" sm="6">
+        <MudPaper Class="pa-4">
+            <div class="d-flex justify-space-between align-center">
+                <MudText Typo="Typo.h6">Cuentas por Pagar (CxP)</MudText>
+                <MudIcon Icon="@Icons.Material.Filled.ArrowUpward" Color="MudBlazor.Color.Error" />
+            </div>
+            <MudText Typo="Typo.h3" Class="mt-2 text-error">@totalPayables.ToString("C")</MudText>
+            <MudText Typo="Typo.body2" Class="mud-text-secondary mt-1">Deudas pendientes con proveedores</MudText>
+        </MudPaper>
+    </MudItem>
+</MudGrid>
+
+<MudText Typo="Typo.h5" Class="mt-8 mb-4">Métricas de Negocio</MudText>
+<MudGrid>
+    <MudItem xs="12" md="8">
+        <MudPaper Class="pa-4">
+            <MudText Typo="Typo.h6" Class="mb-4">Ventas Últimos Días (Simulación)</MudText>
+            <ApexChart TItem="OrderData" Title="Ventas Diarias">
+                <ApexPointSeries TItem="OrderData"
+                                 Items="orders"
+                                 Name="Ingresos"
+                                 SeriesType="SeriesType.Area"
+                                 XValue="@(e => e.Date)"
+                                 YAggregate="@(e => e.Sum(e => e.Amount))" />
+            </ApexChart>
+        </MudPaper>
+    </MudItem>
+    <MudItem xs="12" md="4">
+        <MudPaper Class="pa-4">
+            <MudText Typo="Typo.h6" Class="mb-4">Distribución por Sucursal</MudText>
+            <ApexChart TItem="BranchData" Title="Sucursales">
+                <ApexPointSeries TItem="BranchData"
+                                 Items="branches"
+                                 Name="Porcentaje"
+                                 SeriesType="SeriesType.Donut"
+                                 XValue="@(e => e.Name)"
+                                 YAggregate="@(e => e.Sum(e => e.Value))" />
+            </ApexChart>
+        </MudPaper>
+    </MudItem>
+</MudGrid>
+
+@code {
+    private decimal totalReceivables = 0;
+    private decimal totalPayables = 0;
+
+    private List<OrderData> orders = new();
+    private List<BranchData> branches = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Cargar datos financieros
+        try
+        {
+            var receivables = await Http.GetFromJsonAsync<List<AccountsReceivableDto>>("api/finance/receivables");
+            if (receivables != null)
+                totalReceivables = receivables.Sum(r => r.BalanceDue);
+
+            var payables = await Http.GetFromJsonAsync<List<AccountsPayableDto>>("api/finance/payables");
+            if (payables != null)
+                totalPayables = payables.Sum(p => p.BalanceDue);
+        }
+        catch
+        {
+            // Omitimos errores por simplicidad en el dashboard
+        }
+
+        // Generar datos falsos para el demo de los gráficos
+        orders = new List<OrderData>
+        {
+            new OrderData { Date = "Lunes", Amount = 1200 },
+            new OrderData { Date = "Martes", Amount = 1500 },
+            new OrderData { Date = "Miércoles", Amount = 900 },
+            new OrderData { Date = "Jueves", Amount = 2100 },
+            new OrderData { Date = "Viernes", Amount = 2800 },
+            new OrderData { Date = "Sábado", Amount = 3500 },
+            new OrderData { Date = "Domingo", Amount = 1100 }
+        };
+
+        branches = new List<BranchData>
+        {
+            new BranchData { Name = "Sede Norte", Value = 45 },
+            new BranchData { Name = "Sede Sur", Value = 30 },
+            new BranchData { Name = "Sede Este", Value = 25 }
+        };
+    }
+
+    public class OrderData
+    {
+        public string Date { get; set; } = "";
+        public decimal Amount { get; set; }
+    }
+
+    public class BranchData
+    {
+        public string Name { get; set; } = "";
+        public decimal Value { get; set; }
+    }
+}

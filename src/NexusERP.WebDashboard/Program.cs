@@ -18,5 +18,6 @@ builder.Services.AddMudServices();
 builder.Services.AddScoped<ILocalStorageService, LocalStorageService>();
 builder.Services.AddScoped<AuthenticationStateProvider, CustomAuthStateProvider>();
 builder.Services.AddAuthorizationCore();
+builder.Services.AddScoped<NexusERP.WebDashboard.Services.NotificationService>();
 
 await builder.Build().RunAsync();

@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using NexusERP.Application.Catalog.Products.Commands.CreateProduct;
 using NexusERP.Application.Catalog.Products.Commands.UpdateProductVariant;
 using NexusERP.Application.Catalog.Products.Queries.GetProducts;
+using NexusERP.Application.Catalog.Products.Queries.GetProductVariants;
 
 namespace NexusERP.API.Controllers;
 
@@ -23,6 +24,12 @@ public class ProductsController : ControllerBase
     public async Task<ActionResult<List<ProductDto>>> GetAll()
     {
         return Ok(await _mediator.Send(new GetProductsQuery()));
+    }
+
+    [HttpGet("variants")]
+    public async Task<ActionResult<List<FlatProductVariantDto>>> GetVariants()
+    {
+        return Ok(await _mediator.Send(new GetProductVariantsQuery()));
     }
 
     [HttpPost]

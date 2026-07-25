@@ -3,6 +3,9 @@ using NexusERP.Domain.Entities;
 
 using NexusERP.Domain.Entities.Catalog;
 using NexusERP.Domain.Entities.Sales;
+using NexusERP.Domain.Entities.Inventory;
+using NexusERP.Domain.Entities.Purchases;
+using NexusERP.Domain.Entities.Finance;
 
 namespace NexusERP.Application.Common.Interfaces;
 
@@ -31,6 +34,17 @@ public interface INexusDbContext
 
     DbSet<NexusERP.Domain.Entities.Inventory.InventoryTransaction> InventoryTransactions { get; }
     DbSet<NexusERP.Domain.Entities.Inventory.InventoryBalance> InventoryBalances { get; }
+    
+    // Compras
+    DbSet<Supplier> Suppliers { get; }
+    DbSet<PurchaseOrder> PurchaseOrders { get; }
+    DbSet<PurchaseOrderDetail> PurchaseOrderDetails { get; }
+    
+    // Finanzas
+    DbSet<AccountsReceivable> AccountsReceivables { get; }
+    DbSet<CustomerPayment> CustomerPayments { get; }
+    DbSet<AccountsPayable> AccountsPayables { get; }
+    DbSet<SupplierPayment> SupplierPayments { get; }
     
     DbSet<AuditLog> AuditLogs { get; }
 

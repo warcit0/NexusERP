@@ -1,0 +1,140 @@
+@page "/finance/accounts-payable"
+@using NexusERP.WebDashboard.Models
+@inject HttpClient Http
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+
+<MudText Typo="Typo.h5" Class="mb-4">Cuentas por Pagar (CxP)</MudText>
+
+<MudPaper Class="pa-4 mb-4">
+    <MudGrid>
+        <MudItem xs="12" sm="3">
+            <MudPaper Class="pa-3" Style="background: linear-gradient(135deg,#7f1d1d,#dc2626); color:white; border-radius:12px;">
+                <MudText Typo="Typo.caption">Total por Pagar</MudText>
+                <MudText Typo="Typo.h5">@payables.Sum(p => p.BalanceDue).ToString("C")</MudText>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" sm="3">
+            <MudPaper Class="pa-3" Style="background: linear-gradient(135deg,#78350f,#d97706); color:white; border-radius:12px;">
+                <MudText Typo="Typo.caption">Vencidas</MudText>
+                <MudText Typo="Typo.h5">@payables.Count(p => p.DueDate < DateTime.Now && p.Status != "Paid")</MudText>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" sm="3">
+            <MudPaper Class="pa-3" Style="background: linear-gradient(135deg,#1a4731,#16a34a); color:white; border-radius:12px;">
+                <MudText Typo="Typo.caption">Pagadas</MudText>
+                <MudText Typo="Typo.h5">@payables.Count(p => p.Status == "Paid")</MudText>
+            </MudPaper>
+        </MudItem>
+        <MudItem xs="12" sm="3">
+            <MudPaper Class="pa-3" Style="background: linear-gradient(135deg,#1e3a5f,#2563eb); color:white; border-radius:12px;">
+                <MudText Typo="Typo.caption">Total Cuentas</MudText>
+                <MudText Typo="Typo.h5">@payables.Count</MudText>
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+</MudPaper>
+
+<MudTable Items="@payables" Dense="true" Hover="true" Loading="@loading" Striped="true">
+    <HeaderContent>
+        <MudTh>Proveedor</MudTh>
+        <MudTh>Factura</MudTh>
+        <MudTh>Vencimiento</MudTh>
+        <MudTh>Monto Original</MudTh>
+        <MudTh>Saldo Deudor</MudTh>
+        <MudTh>Estado</MudTh>
+        <MudTh>Acciones</MudTh>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd DataLabel="Proveedor">@context.SupplierName</MudTd>
+        <MudTd DataLabel="Factura">@context.InvoiceNumber</MudTd>
+        <MudTd DataLabel="Vencimiento">
+            <span style="color: @(context.DueDate < DateTime.Now && context.Status != "Paid" ? "red" : "inherit")">
+                @context.DueDate.ToString("dd/MM/yyyy")
+            </span>
+        </MudTd>
+        <MudTd DataLabel="Monto Original">@context.OriginalAmount.ToString("C")</MudTd>
+        <MudTd DataLabel="Saldo Deudor"><strong>@context.BalanceDue.ToString("C")</strong></MudTd>
+        <MudTd DataLabel="Estado">
+            <MudChip T="string" Color="@GetStatusColor(context.Status, context.DueDate)" Size="Size.Small">
+                @TranslateStatus(context.Status, context.DueDate)
+            </MudChip>
+        </MudTd>
+        <MudTd>
+            @if (context.BalanceDue > 0)
+            {
+                <MudButton Variant="Variant.Filled" Color="MudBlazor.Color.Primary" Size="Size.Small"
+                           OnClick="@(() => OpenPaymentDialog(context))">
+                    Pagar
+                </MudButton>
+            }
+        </MudTd>
+    </RowTemplate>
+    <NoRecordsContent>
+        <MudText Class="pa-8 text-center mud-text-secondary">No hay cuentas por pagar. Se generan automáticamente al crear o recibir órdenes de compra.</MudText>
+    </NoRecordsContent>
+</MudTable>
+
+@code {
+    private List<AccountsPayableDto> payables = new();
+    private bool loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadPayables();
+    }
+
+    private async Task LoadPayables()
+    {
+        loading = true;
+        try
+        {
+            var response = await Http.GetFromJsonAsync<List<AccountsPayableDto>>("api/finance/payables");
+            if (response != null)
+                payables = response;
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error al cargar cuentas: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            loading = false;
+        }
+    }
+
+    private async Task OpenPaymentDialog(AccountsPayableDto item)
+    {
+        var parameters = new DialogParameters<RegisterPayablePaymentDialog>
+        {
+            { x => x.AccountsPayableId, item.Id },
+            { x => x.SupplierName, item.SupplierName },
+            { x => x.InvoiceNumber, item.InvoiceNumber },
+            { x => x.BalanceDue, item.BalanceDue }
+        };
+        var options = new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Small, FullWidth = true };
+        var dialog = await DialogService.ShowAsync<RegisterPayablePaymentDialog>("Registrar Pago a Proveedor", parameters, options);
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+            await LoadPayables();
+        }
+    }
+
+    private MudBlazor.Color GetStatusColor(string status, DateTime dueDate)
+    {
+        if (status == "Paid") return MudBlazor.Color.Success;
+        if (dueDate < DateTime.Now && status != "Paid") return MudBlazor.Color.Error;
+        if (status == "PartiallyPaid") return MudBlazor.Color.Warning;
+        return MudBlazor.Color.Default;
+    }
+
+    private string TranslateStatus(string status, DateTime dueDate)
+    {
+        if (status == "Paid") return "Pagado";
+        if (dueDate < DateTime.Now) return "Vencido";
+        if (status == "PartiallyPaid") return "Parcial";
+        return "Pendiente";
+    }
+}

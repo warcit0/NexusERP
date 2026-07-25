@@ -1,0 +1,74 @@
+@inject HttpClient Http
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <DialogContent>
+        <MudForm @ref="form" @bind-IsValid="@success">
+            <MudTextField @bind-Value="command.Name" Label="Nombre o Razón Social" Required="true" RequiredError="El nombre es obligatorio" Class="mb-3" />
+            <MudTextField @bind-Value="command.TaxId" Label="RFC / Tax ID" Required="true" RequiredError="El RFC es obligatorio" Class="mb-3" />
+            <MudTextField @bind-Value="command.Email" Label="Correo Electrónico" InputType="InputType.Email" Class="mb-3" />
+            <MudTextField @bind-Value="command.Phone" Label="Teléfono" Class="mb-3" />
+            <MudTextField @bind-Value="command.Address" Label="Dirección" Lines="2" Class="mb-3" />
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Disabled="@saving">Cancelar</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Submit" Disabled="@(!success || saving)">
+            @if (saving)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+            }
+            Guardar
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = null!;
+    
+    private MudForm form = null!;
+    private bool success = false;
+    private bool saving = false;
+    private CreateSupplierCommand command = new();
+
+    private async Task Submit()
+    {
+        await form.Validate();
+        if (form.IsValid)
+        {
+            saving = true;
+            try
+            {
+                var response = await Http.PostAsJsonAsync("api/purchases/suppliers", command);
+                if (response.IsSuccessStatusCode)
+                {
+                    Snackbar.Add("Proveedor creado exitosamente", Severity.Success);
+                    MudDialog.Close(DialogResult.Ok(true));
+                }
+                else
+                {
+                    Snackbar.Add("Error al crear el proveedor", Severity.Error);
+                }
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add("Error de conexión: " + ex.Message, Severity.Error);
+            }
+            finally
+            {
+                saving = false;
+            }
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    public class CreateSupplierCommand
+    {
+        public string Name { get; set; } = string.Empty;
+        public string TaxId { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public string Phone { get; set; } = string.Empty;
+        public string Address { get; set; } = string.Empty;
+    }
+}

@@ -6,6 +6,8 @@ using NexusERP.Infrastructure.Persistence.Interceptors;
 using NexusERP.Domain.Entities.Catalog;
 using NexusERP.Domain.Entities.Sales;
 using NexusERP.Domain.Entities.Inventory;
+using NexusERP.Domain.Entities.Purchases;
+using NexusERP.Domain.Entities.Finance;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using NexusERP.Infrastructure.Identity;
 
@@ -37,6 +39,17 @@ public class NexusDbContext : IdentityDbContext<ApplicationUser>, INexusDbContex
 
     public DbSet<NexusERP.Domain.Entities.Inventory.InventoryTransaction> InventoryTransactions => Set<NexusERP.Domain.Entities.Inventory.InventoryTransaction>();
     public DbSet<NexusERP.Domain.Entities.Inventory.InventoryBalance> InventoryBalances => Set<NexusERP.Domain.Entities.Inventory.InventoryBalance>();
+    
+    // Compras
+    public DbSet<Supplier> Suppliers => Set<Supplier>();
+    public DbSet<PurchaseOrder> PurchaseOrders => Set<PurchaseOrder>();
+    public DbSet<PurchaseOrderDetail> PurchaseOrderDetails => Set<PurchaseOrderDetail>();
+    
+    // Finanzas
+    public DbSet<AccountsReceivable> AccountsReceivables => Set<AccountsReceivable>();
+    public DbSet<CustomerPayment> CustomerPayments => Set<CustomerPayment>();
+    public DbSet<AccountsPayable> AccountsPayables => Set<AccountsPayable>();
+    public DbSet<SupplierPayment> SupplierPayments => Set<SupplierPayment>();
 
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
 
@@ -75,6 +88,15 @@ public class NexusDbContext : IdentityDbContext<ApplicationUser>, INexusDbContex
         builder.Entity<SaleDetail>().ToTable("SaleDetails", "tenant");
         builder.Entity<Payment>().ToTable("Payments", "tenant");
         
+        builder.Entity<Supplier>().ToTable("Suppliers", "tenant");
+        builder.Entity<PurchaseOrder>().ToTable("PurchaseOrders", "tenant");
+        builder.Entity<PurchaseOrderDetail>().ToTable("PurchaseOrderDetails", "tenant");
+        
+        builder.Entity<AccountsReceivable>().ToTable("AccountsReceivables", "tenant");
+        builder.Entity<CustomerPayment>().ToTable("CustomerPayments", "tenant");
+        builder.Entity<AccountsPayable>().ToTable("AccountsPayables", "tenant");
+        builder.Entity<SupplierPayment>().ToTable("SupplierPayments", "tenant");
+
         builder.Entity<NexusERP.Domain.Entities.Inventory.InventoryTransaction>().ToTable("InventoryTransactions", "tenant");
         builder.Entity<NexusERP.Domain.Entities.Inventory.InventoryBalance>().ToTable("InventoryBalances", "tenant");
         
@@ -93,6 +115,15 @@ public class NexusDbContext : IdentityDbContext<ApplicationUser>, INexusDbContex
         builder.Entity<Sale>().HasQueryFilter(e => e.TenantId == _currentTenantService.TenantId);
         builder.Entity<SaleDetail>().HasQueryFilter(e => e.TenantId == _currentTenantService.TenantId);
         builder.Entity<Payment>().HasQueryFilter(e => e.TenantId == _currentTenantService.TenantId);
+        
+        builder.Entity<Supplier>().HasQueryFilter(e => e.TenantId == _currentTenantService.TenantId);
+        builder.Entity<PurchaseOrder>().HasQueryFilter(e => e.TenantId == _currentTenantService.TenantId);
+        builder.Entity<PurchaseOrderDetail>().HasQueryFilter(e => e.TenantId == _currentTenantService.TenantId);
+        
+        builder.Entity<AccountsReceivable>().HasQueryFilter(e => e.TenantId == _currentTenantService.TenantId);
+        builder.Entity<CustomerPayment>().HasQueryFilter(e => e.TenantId == _currentTenantService.TenantId);
+        builder.Entity<AccountsPayable>().HasQueryFilter(e => e.TenantId == _currentTenantService.TenantId);
+        builder.Entity<SupplierPayment>().HasQueryFilter(e => e.TenantId == _currentTenantService.TenantId);
         
         builder.Entity<NexusERP.Domain.Entities.Inventory.InventoryTransaction>().HasQueryFilter(e => e.TenantId == _currentTenantService.TenantId);
         builder.Entity<NexusERP.Domain.Entities.Inventory.InventoryBalance>().HasQueryFilter(e => e.TenantId == _currentTenantService.TenantId);

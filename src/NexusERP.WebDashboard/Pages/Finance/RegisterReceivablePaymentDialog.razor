@@ -1,0 +1,91 @@
+@inject HttpClient Http
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <DialogContent>
+        <MudGrid>
+            <MudItem xs="12">
+                <MudText Typo="Typo.body1">
+                    Cliente: <strong>@CustomerName</strong> — Factura: <strong>@InvoiceNumber</strong>
+                </MudText>
+                <MudText Typo="Typo.body2" Class="mud-text-secondary mt-1">
+                    Saldo pendiente: <strong>@BalanceDue.ToString("C")</strong>
+                </MudText>
+            </MudItem>
+            <MudItem xs="12">
+                <MudNumericField @bind-Value="amount" Label="Monto a Cobrar" Min="0.01m" Max="@BalanceDue" Required="true" />
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudSelect @bind-Value="paymentMethod" Label="Método de Pago" Required="true">
+                    <MudSelectItem Value="@("Efectivo")">Efectivo</MudSelectItem>
+                    <MudSelectItem Value="@("Transferencia")">Transferencia</MudSelectItem>
+                    <MudSelectItem Value="@("Tarjeta")">Tarjeta</MudSelectItem>
+                    <MudSelectItem Value="@("Cheque")">Cheque</MudSelectItem>
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" sm="6">
+                <MudTextField @bind-Value="reference" Label="Referencia / Comprobante" />
+            </MudItem>
+            <MudItem xs="12">
+                <MudTextField @bind-Value="notes" Label="Notas" Lines="2" />
+            </MudItem>
+        </MudGrid>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancelar</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Submit" Disabled="@(amount <= 0 || string.IsNullOrEmpty(paymentMethod))">Registrar Pago</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter] public Guid AccountsReceivableId { get; set; }
+    [Parameter] public string CustomerName { get; set; } = string.Empty;
+    [Parameter] public string InvoiceNumber { get; set; } = string.Empty;
+    [Parameter] public decimal BalanceDue { get; set; }
+
+    private decimal amount;
+    private string paymentMethod = string.Empty;
+    private string reference = string.Empty;
+    private string notes = string.Empty;
+
+    protected override void OnParametersSet()
+    {
+        amount = BalanceDue; // Pre-fill with total balance
+    }
+
+    private async Task Submit()
+    {
+        try
+        {
+            var command = new
+            {
+                AccountsReceivableId,
+                Amount = amount,
+                PaymentMethod = paymentMethod,
+                Reference = reference,
+                CashRegisterSessionId = (Guid?)null,
+                Notes = notes
+            };
+
+            var response = await Http.PostAsJsonAsync($"api/finance/receivables/{AccountsReceivableId}/pay", command);
+            if (response.IsSuccessStatusCode)
+            {
+                Snackbar.Add("Pago registrado exitosamente.", Severity.Success);
+                MudDialog.Close(DialogResult.Ok(true));
+            }
+            else
+            {
+                var error = await response.Content.ReadAsStringAsync();
+                Snackbar.Add($"Error al registrar pago: {error}", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add("Error de conexión: " + ex.Message, Severity.Error);
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

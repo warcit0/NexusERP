@@ -70,6 +70,7 @@ builder.Services.AddCors(options =>
 });
 
 builder.Services.AddControllers();
+builder.Services.AddSignalR();
 // OpenAPI / Swagger Configuration
 builder.Services.AddOpenApi();
 
@@ -110,5 +111,6 @@ app.UseAuthorization();
 app.UseRateLimiter();
 
 app.MapControllers();
+app.MapHub<NexusERP.API.Hubs.NotificationHub>("/notificationhub");
 
 app.Run();

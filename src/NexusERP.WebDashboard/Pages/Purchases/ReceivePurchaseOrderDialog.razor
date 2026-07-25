@@ -1,0 +1,161 @@
+@inject HttpClient Http
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <DialogContent>
+        @if (loading)
+        {
+            <MudProgressCircular Indeterminate="true" />
+        }
+        else
+        {
+            <MudText Typo="Typo.body1" Class="mb-3">
+                Confirmar recepción de la orden <strong>@OrderNumber</strong>. El inventario será actualizado automáticamente.
+            </MudText>
+            <MudTextField @bind-Value="invoiceNumber" Label="Número de Factura del Proveedor" Required="true" Class="mb-3" />
+
+            @if (details.Any())
+            {
+                <MudText Typo="Typo.subtitle1" Class="mb-2">Artículos a recibir:</MudText>
+                <MudTable Items="details" Dense="true" Hover="false">
+                    <HeaderContent>
+                        <MudTh>Producto</MudTh>
+                        <MudTh>SKU</MudTh>
+                        <MudTh>Ordenado</MudTh>
+                        <MudTh>A Recibir</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd>@context.ProductName</MudTd>
+                        <MudTd>@context.Sku</MudTd>
+                        <MudTd>@context.QuantityOrdered</MudTd>
+                        <MudTd>
+                            <MudNumericField @bind-Value="context.QuantityToReceive"
+                                            Min="0" Max="@(context.QuantityOrdered - context.QuantityReceived)"
+                                            HideSpinButtons="true" />
+                        </MudTd>
+                    </RowTemplate>
+                </MudTable>
+            }
+            else
+            {
+                <MudAlert Severity="Severity.Warning">Esta orden no tiene detalles.</MudAlert>
+            }
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Disabled="@saving">Cancelar</MudButton>
+        <MudButton Color="Color.Success" Variant="Variant.Filled" OnClick="Confirm"
+                   Disabled="@(saving || string.IsNullOrWhiteSpace(invoiceNumber) || !details.Any())">
+            @if (saving)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+            }
+            Confirmar Recepción
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = null!;
+
+    [Parameter] public Guid OrderId { get; set; }
+    [Parameter] public string OrderNumber { get; set; } = string.Empty;
+
+    private string invoiceNumber = string.Empty;
+    private bool loading = true;
+    private bool saving = false;
+    private List<OrderDetailItem> details = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var order = await Http.GetFromJsonAsync<PurchaseOrderDetailResponse>($"api/purchases/orders/{OrderId}");
+            if (order?.Details != null)
+            {
+                details = order.Details.Select(d => new OrderDetailItem
+                {
+                    Id = d.Id,
+                    ProductName = d.ProductName,
+                    Sku = d.Sku,
+                    QuantityOrdered = d.QuantityOrdered,
+                    QuantityReceived = d.QuantityReceived,
+                    QuantityToReceive = d.QuantityOrdered - d.QuantityReceived
+                }).ToList();
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add("Error al cargar detalles: " + ex.Message, Severity.Error);
+        }
+        finally
+        {
+            loading = false;
+        }
+    }
+
+    private async Task Confirm()
+    {
+        saving = true;
+        try
+        {
+            var command = new
+            {
+                PurchaseOrderId = OrderId,
+                SupplierInvoiceNumber = invoiceNumber,
+                ReceivedDetails = details.Select(d => new
+                {
+                    PurchaseOrderDetailId = d.Id,
+                    QuantityReceived = d.QuantityToReceive
+                }).ToList()
+            };
+
+            var response = await Http.PostAsJsonAsync($"api/purchases/orders/{OrderId}/receive", command);
+            if (response.IsSuccessStatusCode)
+            {
+                Snackbar.Add("¡Orden recibida! El inventario fue actualizado automáticamente.", Severity.Success);
+                MudDialog.Close(DialogResult.Ok(true));
+            }
+            else
+            {
+                var error = await response.Content.ReadAsStringAsync();
+                Snackbar.Add($"Error: {error}", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add("Error de conexión: " + ex.Message, Severity.Error);
+        }
+        finally
+        {
+            saving = false;
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    // DTOs locales
+    private class OrderDetailItem
+    {
+        public Guid Id { get; set; }
+        public string ProductName { get; set; } = string.Empty;
+        public string Sku { get; set; } = string.Empty;
+        public decimal QuantityOrdered { get; set; }
+        public decimal QuantityReceived { get; set; }
+        public decimal QuantityToReceive { get; set; }
+    }
+
+    private class PurchaseOrderDetailResponse
+    {
+        public List<PurchaseOrderDetailDto>? Details { get; set; }
+    }
+
+    private class PurchaseOrderDetailDto
+    {
+        public Guid Id { get; set; }
+        public string ProductName { get; set; } = string.Empty;
+        public string Sku { get; set; } = string.Empty;
+        public decimal QuantityOrdered { get; set; }
+        public decimal QuantityReceived { get; set; }
+    }
+}
