@@ -1,0 +1,154 @@
+@inject HttpClient Http
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <DialogContent>
+        @if (loading)
+        {
+            <div class="d-flex justify-center pa-4">
+                <MudProgressCircular Indeterminate="true" Color="Color.Primary" />
+            </div>
+        }
+        else
+        {
+        <MudForm @ref="form" @bind-IsValid="@success">
+            <MudGrid>
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="model.Name" Label="Razón Social" Required="true" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="model.CommercialName" Label="Nombre Comercial" Required="true" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="model.TaxId" Label="Cédula Jurídica / RUC" Required="true" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="model.Subdomain" Label="Subdominio" Required="true" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="model.Email" Label="Correo Electrónico" Required="true" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="model.Phone" Label="Teléfono" Required="true" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudSwitch @bind-Value="model.IsActive" Color="Color.Primary">Estado Activo</MudSwitch>
+                </MudItem>
+            </MudGrid>
+        </MudForm>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Disabled="@saving">Cancelar</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Submit" Disabled="@(!success || saving)">
+            @if (saving) { <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" /> }
+            Guardar Cambios
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = null!;
+    
+    [Parameter] public Guid TenantId { get; set; }
+    
+    private MudForm form = null!;
+    private bool success = false;
+    private bool saving = false;
+    private bool loading = false;
+    private UpdateTenantModel model = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        loading = true;
+        try
+        {
+            var response = await Http.GetFromJsonAsync<TenantDetailResponse>($"api/v1/platform/tenants/{TenantId}");
+            if (response != null)
+            {
+                model.Name = response.Name;
+                model.CommercialName = response.CommercialName;
+                model.TaxId = response.TaxId;
+                model.Subdomain = response.Subdomain;
+                model.Email = response.Email;
+                model.Phone = response.Phone;
+                model.IsActive = response.IsActive;
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add("Error al cargar datos: " + ex.Message, Severity.Error);
+        }
+        finally
+        {
+            loading = false;
+        }
+    }
+
+    private async Task Submit()
+    {
+        await form.Validate();
+        if (form.IsValid)
+        {
+            saving = true;
+            try
+            {
+                var payload = new
+                {
+                    Id = TenantId,
+                    model.Name,
+                    model.CommercialName,
+                    model.TaxId,
+                    model.Subdomain,
+                    model.Email,
+                    model.Phone,
+                    model.IsActive
+                };
+                var response = await Http.PutAsJsonAsync($"api/v1/platform/tenants/{TenantId}", payload);
+                if (response.IsSuccessStatusCode)
+                {
+                    Snackbar.Add("Empresa actualizada exitosamente", Severity.Success);
+                    MudDialog.Close(DialogResult.Ok(true));
+                }
+                else
+                {
+                    var error = await response.Content.ReadAsStringAsync();
+                    Snackbar.Add($"Error al actualizar empresa: {error}", Severity.Error);
+                }
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add("Error de conexión: " + ex.Message, Severity.Error);
+            }
+            finally
+            {
+                saving = false;
+            }
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    public class UpdateTenantModel
+    {
+        public string Name { get; set; } = string.Empty;
+        public string CommercialName { get; set; } = string.Empty;
+        public string TaxId { get; set; } = string.Empty;
+        public string Subdomain { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public string Phone { get; set; } = string.Empty;
+        public bool IsActive { get; set; } = true;
+    }
+
+    public class TenantDetailResponse
+    {
+        public Guid Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string CommercialName { get; set; } = string.Empty;
+        public string TaxId { get; set; } = string.Empty;
+        public string Subdomain { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public string Phone { get; set; } = string.Empty;
+        public bool IsActive { get; set; }
+    }
+}

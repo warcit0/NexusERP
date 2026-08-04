@@ -1,0 +1,112 @@
+@inject HttpClient Http
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <DialogContent>
+        @if (loadingData)
+        {
+            <MudProgressCircular Indeterminate="true" />
+            <MudText>Cargando datos...</MudText>
+        }
+        else
+        {
+            <MudForm @ref="form" @bind-IsValid="@success">
+                <MudSelect @bind-Value="tenantId" Label="Empresa (Tenant)" Required="true" RequiredError="Debe seleccionar una empresa.">
+                    @foreach (var tenant in tenants)
+                    {
+                        <MudSelectItem Value="@tenant.Id">@tenant.Name</MudSelectItem>
+                    }
+                </MudSelect>
+                
+                <MudSelect @bind-Value="planId" Label="Plan de Suscripción" Required="true" RequiredError="Debe seleccionar un plan." Class="mt-3">
+                    @foreach (var plan in plans)
+                    {
+                        <MudSelectItem Value="@plan.Id">@plan.Name (@plan.Code)</MudSelectItem>
+                    }
+                </MudSelect>
+                
+                <MudNumericField @bind-Value="durationMonths" Label="Duración (Meses)" Min="1" Max="60" Required="true" Class="mt-3" />
+            </MudForm>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Disabled="@saving">Cancelar</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Submit" Disabled="@(!success || saving || loadingData)">
+            @if (saving) { <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" /> }
+            Asignar Licencia
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = null!;
+    
+    private MudForm form = null!;
+    private bool success = false;
+    private bool saving = false;
+    private bool loadingData = true;
+    
+    private Guid? tenantId;
+    private Guid? planId;
+    private int durationMonths = 12;
+
+    private List<TenantDto> tenants = new();
+    private List<PlanDto> plans = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            tenants = await Http.GetFromJsonAsync<List<TenantDto>>("api/v1/platform/tenants") ?? new();
+            plans = await Http.GetFromJsonAsync<List<PlanDto>>("api/v1/platform/plans") ?? new();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add("Error cargando catálogos: " + ex.Message, Severity.Error);
+        }
+        finally
+        {
+            loadingData = false;
+        }
+    }
+
+    private async Task Submit()
+    {
+        await form.Validate();
+        if (form.IsValid && tenantId.HasValue && planId.HasValue)
+        {
+            saving = true;
+            try
+            {
+                var command = new { TenantId = tenantId.Value, PlanId = planId.Value, DurationMonths = durationMonths };
+                var response = await Http.PostAsJsonAsync("api/v1/platform/licenses/assign", command);
+                
+                if (response.IsSuccessStatusCode)
+                {
+                    Snackbar.Add("Licencia asignada exitosamente", Severity.Success);
+                    MudDialog.Close(DialogResult.Ok(true));
+                }
+                else
+                {
+                    Snackbar.Add("Error al asignar la licencia", Severity.Error);
+                }
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add("Error de conexión: " + ex.Message, Severity.Error);
+            }
+            finally
+            {
+                saving = false;
+            }
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+
+    public class TenantDto
+    {
+        public Guid Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+    }
+}

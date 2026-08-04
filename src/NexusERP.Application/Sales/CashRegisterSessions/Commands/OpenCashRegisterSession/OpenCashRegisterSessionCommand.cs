@@ -37,6 +37,13 @@ public class OpenCashRegisterSessionCommandHandler : IRequestHandler<OpenCashReg
         };
 
         _context.CashRegisterSessions.Add(session);
+        
+        var register = await _context.CashRegisters.FindAsync(request.CashRegisterId);
+        if (register != null)
+        {
+            register.IsOpen = true;
+        }
+
         await _context.SaveChangesAsync(cancellationToken);
 
         return session.Id;

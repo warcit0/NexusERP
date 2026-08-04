@@ -63,7 +63,7 @@ builder.Services.AddCors(options =>
     options.AddPolicy("AllowWebDashboard",
         policy =>
         {
-            policy.WithOrigins("http://localhost:5237", "https://localhost:7116", "http://localhost:5001", "https://localhost:5001")
+            policy.WithOrigins("http://localhost:5237", "https://localhost:7136", "https://localhost:7116", "http://localhost:5001", "https://localhost:5001")
                   .AllowAnyHeader()
                   .AllowAnyMethod();
         });

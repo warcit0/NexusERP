@@ -2,6 +2,8 @@ using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using NexusERP.Application.Platform.Licenses.Commands.ActivateLicense;
+using NexusERP.Application.Platform.Licenses.Commands.AssignLicense;
+using NexusERP.Application.Platform.Licenses.Queries.GetLicenses;
 
 namespace NexusERP.API.Controllers;
 
@@ -15,6 +17,19 @@ public class LicensesController : ControllerBase
     public LicensesController(IMediator mediator)
     {
         _mediator = mediator;
+    }
+
+    [HttpGet]
+    public async Task<ActionResult<List<LicenseDto>>> GetLicenses()
+    {
+        return Ok(await _mediator.Send(new GetLicensesQuery()));
+    }
+
+    [HttpPost("assign")]
+    public async Task<ActionResult> AssignLicense([FromBody] AssignLicenseCommand command)
+    {
+        var success = await _mediator.Send(command);
+        return success ? Ok() : BadRequest("Error al asignar licencia. Verifique el Tenant y Plan.");
     }
 
     /// <summary>

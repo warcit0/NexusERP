@@ -15,7 +15,7 @@ public class NotificationService : IAsyncDisposable
             return;
 
         _hubConnection = new HubConnectionBuilder()
-            .WithUrl("http://localhost:5174/notificationhub", options =>
+            .WithUrl("https://localhost:7116/notificationhub", options =>
             {
                 options.AccessTokenProvider = () => Task.FromResult(token)!;
             })

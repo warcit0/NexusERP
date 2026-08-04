@@ -1,0 +1,107 @@
+﻿@inject HttpClient Http
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <DialogContent>
+        <MudForm @ref="form" @bind-IsValid="@success">
+            <MudGrid>
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="model.Name" Label="Nombre del Plan" Required="true" RequiredError="El nombre es requerido." />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="model.Code" Label="Código (ej. BASIC, PRO)" Required="true" RequiredError="El código es requerido." />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudNumericField @bind-Value="model.MonthlyPrice" Label="Precio Mensual" Format="C2" Min="0" Required="true" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudNumericField @bind-Value="model.AnnualPrice" Label="Precio Anual" Format="C2" Min="0" Required="true" />
+                </MudItem>
+                
+                <MudItem xs="12">
+                    <MudText Typo="Typo.subtitle2" Class="mt-4 mb-2">Límites del Plan</MudText>
+                    <MudDivider />
+                </MudItem>
+                
+                <MudItem xs="12" sm="4">
+                    <MudNumericField @bind-Value="model.MaxUsers" Label="Máx Usuarios (0 = sin límite)" Min="0" />
+                </MudItem>
+                <MudItem xs="12" sm="4">
+                    <MudNumericField @bind-Value="model.MaxBranches" Label="Máx Sucursales (0 = sin límite)" Min="0" />
+                </MudItem>
+                <MudItem xs="12" sm="4">
+                    <MudNumericField @bind-Value="model.MaxInvoicesPerMonth" Label="Máx Facturas/Mes (0 = sin límite)" Min="0" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudSwitch @bind-Value="model.IncludesAdvancedAnalytics" Color="Color.Primary">Incluye Analíticas Avanzadas</MudSwitch>
+                </MudItem>
+            </MudGrid>
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Disabled="@saving">Cancelar</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Submit" Disabled="@(!success || saving)">
+            @if (saving) { <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" /> }
+            Guardar Cambios
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = null!;
+    
+    [Parameter] public PlanDto Plan { get; set; } = null!;
+    
+    private MudForm form = null!;
+    private bool success = false;
+    private bool saving = false;
+    private PlanDto model = new();
+
+    protected override void OnInitialized()
+    {
+        model = new PlanDto
+        {
+            Id = Plan.Id,
+            Name = Plan.Name,
+            Code = Plan.Code,
+            MonthlyPrice = Plan.MonthlyPrice,
+            AnnualPrice = Plan.AnnualPrice,
+            MaxUsers = Plan.MaxUsers,
+            MaxBranches = Plan.MaxBranches,
+            MaxInvoicesPerMonth = Plan.MaxInvoicesPerMonth,
+            IncludesAdvancedAnalytics = Plan.IncludesAdvancedAnalytics
+        };
+    }
+
+    private async Task Submit()
+    {
+        await form.Validate();
+        if (form.IsValid)
+        {
+            saving = true;
+            try
+            {
+                var response = await Http.PutAsJsonAsync($"api/v1/platform/plans/{model.Id}", model);
+                if (response.IsSuccessStatusCode)
+                {
+                    Snackbar.Add("Plan actualizado exitosamente", Severity.Success);
+                    MudDialog.Close(DialogResult.Ok(true));
+                }
+                else
+                {
+                    Snackbar.Add("Error al actualizar el plan", Severity.Error);
+                }
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add("Error de conexión: " + ex.Message, Severity.Error);
+            }
+            finally
+            {
+                saving = false;
+            }
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

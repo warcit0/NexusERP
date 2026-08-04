@@ -2,7 +2,9 @@ using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using NexusERP.Application.Platform.Tenants.Commands.CreateTenant;
+using NexusERP.Application.Platform.Tenants.Commands.UpdateTenant;
 using NexusERP.Application.Platform.Tenants.Queries.GetAllTenants;
+using NexusERP.Application.Platform.Tenants.Queries.GetTenantById;
 
 namespace NexusERP.API.Controllers;
 
@@ -51,9 +53,20 @@ public class TenantsController : ControllerBase
     /// Obtiene un Tenant por ID.
     /// </summary>
     [HttpGet("{id:guid}")]
-    public IActionResult GetById(Guid id)
+    public async Task<ActionResult<TenantDetailDto>> GetById(Guid id)
     {
-        // TODO: Implementar GetTenantQuery
-        return Ok(new { id });
+        var result = await _mediator.Send(new GetTenantByIdQuery(id));
+        return result is null ? NotFound() : Ok(result);
+    }
+
+    /// <summary>
+    /// Actualiza la información de un Tenant existente.
+    /// </summary>
+    [HttpPut("{id:guid}")]
+    public async Task<ActionResult> Update(Guid id, [FromBody] UpdateTenantCommand command)
+    {
+        if (id != command.Id) return BadRequest("El ID de la ruta no coincide con el comando.");
+        var success = await _mediator.Send(command);
+        return success ? Ok() : NotFound();
     }
 }

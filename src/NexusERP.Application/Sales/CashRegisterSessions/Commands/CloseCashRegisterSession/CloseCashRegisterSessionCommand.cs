@@ -44,8 +44,15 @@ public class CloseCashRegisterSessionCommandHandler : IRequestHandler<CloseCashR
         
         session.ClosedAt = DateTime.UtcNow;
         session.ClosedByUserId = _currentUserService.UserId ?? "System";
-        session.Notes = request.Notes;
         session.IsClosed = true;
+        session.FinalAmount = request.ActualAmount;
+        session.Notes = request.Notes;
+        
+        var register = await _context.CashRegisters.FindAsync(session.CashRegisterId);
+        if (register != null)
+        {
+            register.IsOpen = false;
+        }
 
         await _context.SaveChangesAsync(cancellationToken);
 

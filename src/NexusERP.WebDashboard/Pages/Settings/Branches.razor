@@ -21,6 +21,7 @@
             <MudTh>Dirección</MudTh>
             <MudTh>Teléfono</MudTh>
             <MudTh>Estado</MudTh>
+            <MudTh>Acciones</MudTh>
         </HeaderContent>
         <RowTemplate>
             <MudTd DataLabel="Código">@context.Code</MudTd>
@@ -31,6 +32,10 @@
                 <MudChip T="string" Size="Size.Small" Color="@(context.IsActive ? Color.Success : Color.Error)">
                     @(context.IsActive ? "Activa" : "Inactiva")
                 </MudChip>
+            </MudTd>
+            <MudTd DataLabel="Acciones">
+                <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" Size="Size.Small" />
+                <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small" />
             </MudTd>
         </RowTemplate>
     </MudTable>

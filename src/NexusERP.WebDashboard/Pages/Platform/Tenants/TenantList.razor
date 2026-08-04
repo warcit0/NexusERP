@@ -5,6 +5,7 @@
 @inject HttpClient Http
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
+@inject NavigationManager NavigationManager
 
 <PageTitle>NexusERP | Empresas (Tenants)</PageTitle>
 
@@ -20,7 +21,7 @@
         <MudTh>ID</MudTh>
         <MudTh>Nombre</MudTh>
         <MudTh>Subdominio</MudTh>
-        <MudTh>Base de Datos</MudTh>
+        <MudTh>Plan</MudTh>
         <MudTh>Estado</MudTh>
         <MudTh>Acciones</MudTh>
     </HeaderContent>
@@ -30,9 +31,9 @@
         <MudTd DataLabel="Subdominio">
             <MudChip T="string" Color="Color.Info" Size="Size.Small">@context.Subdomain</MudChip>
         </MudTd>
-        <MudTd DataLabel="Base de Datos">@context.DatabaseConnectionString</MudTd>
+        <MudTd DataLabel="Plan">@context.PlanName</MudTd>
         <MudTd DataLabel="Estado">
-            @if(context.IsActive)
+            @if(context.Status == "Active" || context.IsActive)
             {
                 <MudChip T="string" Color="Color.Success" Size="Size.Small">Activo</MudChip>
             }
@@ -42,9 +43,10 @@
             }
         </MudTd>
         <MudTd DataLabel="Acciones">
-            <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" Size="Size.Small" />
-            <MudIconButton Icon="@Icons.Material.Filled.Key" Color="Color.Secondary" Size="Size.Small" Title="Licencias" />
+            <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Primary" Size="Size.Small" OnClick="@(() => OpenEditDialog(context.Id))" />
+            <MudIconButton Icon="@Icons.Material.Filled.Key" Color="Color.Secondary" Size="Size.Small" Title="Licencias" OnClick="@(() => GoToLicenses(context.Id))" />
         </MudTd>
+
     </RowTemplate>
     <PagerContent>
         <MudTablePager />
@@ -96,12 +98,32 @@
         }
     }
 
+    private async Task OpenEditDialog(Guid tenantId)
+    {
+        var parameters = new DialogParameters { ["TenantId"] = tenantId };
+        var options = new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Small, FullWidth = true };
+        
+        var dialog = await DialogService.ShowAsync<TenantEditDialog>("Editar Empresa", parameters, options);
+        var result = await dialog.Result;
+
+        if (result != null && !result.Canceled)
+        {
+            await LoadTenants();
+        }
+    }
+
+    private void GoToLicenses(Guid tenantId)
+    {
+        NavigationManager.NavigateTo($"/platform/licenses?tenantId={tenantId}");
+    }
+
     public class TenantDto
     {
         public Guid Id { get; set; }
         public string Name { get; set; } = string.Empty;
         public string Subdomain { get; set; } = string.Empty;
-        public string DatabaseConnectionString { get; set; } = string.Empty;
+        public string Status { get; set; } = string.Empty;
         public bool IsActive { get; set; }
+        public string PlanName { get; set; } = string.Empty;
     }
 }

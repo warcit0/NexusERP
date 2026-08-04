@@ -1,0 +1,90 @@
+@page "/platform/licenses"
+@attribute [Authorize(Roles = "SuperAdmin")]
+@inject HttpClient Http
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
+    <MudText Typo="Typo.h4" GutterBottom="true">Licencias de Inquilinos</MudText>
+    <MudText Typo="Typo.subtitle1" Class="mb-4">Gestiona las licencias asignadas a cada empresa en la plataforma.</MudText>
+
+    <MudTable Items="@licenses" Loading="@loading" Hover="true" Breakpoint="Breakpoint.Sm" Elevation="1">
+        <ToolBarContent>
+            <MudSpacer />
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="OpenAssignDialog">
+                Asignar/Renovar Licencia
+            </MudButton>
+        </ToolBarContent>
+        <HeaderContent>
+            <MudTh>Empresa</MudTh>
+            <MudTh>Plan Asignado</MudTh>
+            <MudTh>Fecha Inicio</MudTh>
+            <MudTh>Fecha Vencimiento</MudTh>
+            <MudTh>Clave de Licencia</MudTh>
+            <MudTh>Estado</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Empresa">@context.TenantName</MudTd>
+            <MudTd DataLabel="Plan Asignado">
+                <MudChip T="string" Size="Size.Small" Color="Color.Info">@context.PlanName</MudChip>
+            </MudTd>
+            <MudTd DataLabel="Fecha Inicio">@context.StartDate.ToString("dd/MM/yyyy")</MudTd>
+            <MudTd DataLabel="Fecha Vencimiento">@context.EndDate.ToString("dd/MM/yyyy")</MudTd>
+            <MudTd DataLabel="Clave">
+                <MudText Typo="Typo.body2" Class="mud-text-secondary">@(context.LicenseKey.Length > 8 ? context.LicenseKey.Substring(0, 8) + "..." : context.LicenseKey)</MudText>
+            </MudTd>
+            <MudTd DataLabel="Estado">
+                @if (context.IsActive)
+                {
+                    <MudChip T="string" Size="Size.Small" Color="Color.Success">Activa</MudChip>
+                }
+                else
+                {
+                    <MudChip T="string" Size="Size.Small" Color="Color.Error">Inactiva</MudChip>
+                }
+            </MudTd>
+        </RowTemplate>
+        <NoRecordsContent>
+            <MudText>No se encontraron licencias emitidas.</MudText>
+        </NoRecordsContent>
+    </MudTable>
+</MudContainer>
+
+@code {
+    private List<LicenseDto> licenses = new();
+    private bool loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadLicenses();
+    }
+
+    private async Task LoadLicenses()
+    {
+        loading = true;
+        try
+        {
+            licenses = await Http.GetFromJsonAsync<List<LicenseDto>>("api/v1/platform/licenses") ?? new();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add("Error al cargar licencias: " + ex.Message, Severity.Error);
+        }
+        finally
+        {
+            loading = false;
+        }
+    }
+
+    private async Task OpenAssignDialog()
+    {
+        var options = new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Small, FullWidth = true };
+        var dialog = await DialogService.ShowAsync<LicenseAssignDialog>("Asignar Licencia", options);
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+            await LoadLicenses();
+        }
+    }
+}

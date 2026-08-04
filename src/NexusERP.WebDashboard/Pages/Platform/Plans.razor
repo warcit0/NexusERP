@@ -1,0 +1,120 @@
+@page "/platform/plans"
+@attribute [Authorize(Roles = "SuperAdmin")]
+@inject HttpClient Http
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
+    <MudText Typo="Typo.h4" GutterBottom="true">Planes de Suscripción</MudText>
+    <MudText Typo="Typo.subtitle1" Class="mb-4">Gestiona los planes que se ofrecen a los inquilinos.</MudText>
+
+    <MudTable Items="@plans" Loading="@loading" Hover="true" Breakpoint="Breakpoint.Sm" Elevation="1">
+        <ToolBarContent>
+            <MudSpacer />
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" OnClick="OpenCreateDialog">
+                Nuevo Plan
+            </MudButton>
+        </ToolBarContent>
+        <HeaderContent>
+            <MudTh>Código</MudTh>
+            <MudTh>Nombre</MudTh>
+            <MudTh>Precio Mensual</MudTh>
+            <MudTh>Precio Anual</MudTh>
+            <MudTh>Usuarios</MudTh>
+            <MudTh>Sucursales</MudTh>
+            <MudTh Style="width: 120px; text-align: center;">Acciones</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="Código">
+                <MudChip T="string" Size="Size.Small" Color="Color.Primary">@context.Code</MudChip>
+            </MudTd>
+            <MudTd DataLabel="Nombre">@context.Name</MudTd>
+            <MudTd DataLabel="Precio Mensual">@context.MonthlyPrice.ToString("C2")</MudTd>
+            <MudTd DataLabel="Precio Anual">@context.AnnualPrice.ToString("C2")</MudTd>
+            <MudTd DataLabel="Usuarios">@(context.MaxUsers == 0 ? "Ilimitados" : context.MaxUsers.ToString())</MudTd>
+            <MudTd DataLabel="Sucursales">@(context.MaxBranches == 0 ? "Ilimitadas" : context.MaxBranches.ToString())</MudTd>
+            <MudTd DataLabel="Acciones" Style="text-align: center;">
+                <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="Color.Info" Size="Size.Small" OnClick="@(() => OpenEditDialog(context))" />
+                <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Error" Size="Size.Small" OnClick="@(() => DeletePlan(context))" />
+            </MudTd>
+        </RowTemplate>
+        <NoRecordsContent>
+            <MudText>No se encontraron planes.</MudText>
+        </NoRecordsContent>
+    </MudTable>
+</MudContainer>
+
+@code {
+    private List<PlanDto> plans = new();
+    private bool loading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadPlans();
+    }
+
+    private async Task LoadPlans()
+    {
+        loading = true;
+        try
+        {
+            plans = await Http.GetFromJsonAsync<List<PlanDto>>("api/v1/platform/plans") ?? new();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add("Error al cargar planes: " + ex.Message, Severity.Error);
+        }
+        finally
+        {
+            loading = false;
+        }
+    }
+
+    private async Task OpenCreateDialog()
+    {
+        var options = new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Medium, FullWidth = true };
+        var dialog = await DialogService.ShowAsync<PlanCreateDialog>("Crear Nuevo Plan", options);
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+            await LoadPlans();
+        }
+    }
+
+    private async Task OpenEditDialog(PlanDto plan)
+    {
+        var parameters = new DialogParameters { ["Plan"] = plan };
+        var options = new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Medium, FullWidth = true };
+        var dialog = await DialogService.ShowAsync<PlanEditDialog>("Editar Plan", parameters, options);
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+            await LoadPlans();
+        }
+    }
+
+    private async Task DeletePlan(PlanDto plan)
+    {
+        bool? result = await DialogService.ShowMessageBoxAsync(
+            "Confirmar Eliminación",
+            $"¿Estás seguro que deseas eliminar el plan '{plan.Name}'? Esta acción no se puede deshacer.",
+            yesText: "Eliminar", cancelText: "Cancelar");
+
+        if (result == true)
+        {
+            var response = await Http.DeleteAsync($"api/v1/platform/plans/{plan.Id}");
+            if (response.IsSuccessStatusCode)
+            {
+                Snackbar.Add("Plan eliminado con éxito", Severity.Success);
+                await LoadPlans();
+            }
+            else
+            {
+                var error = await response.Content.ReadAsStringAsync();
+                Snackbar.Add($"No se pudo eliminar: {error}", Severity.Error);
+            }
+        }
+    }
+}

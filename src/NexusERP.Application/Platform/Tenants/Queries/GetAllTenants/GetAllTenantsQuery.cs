@@ -9,6 +9,7 @@ public record TenantDto(
     string Name,
     string Subdomain,
     string Status,
+    bool IsActive,
     string PlanName,
     DateTime CreatedAt,
     int UserCount
