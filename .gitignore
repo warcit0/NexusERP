@@ -482,3 +482,7 @@ $RECYCLE.BIN/
 *.swp
 
 # Markdown files
+
+# Excluir documentos internos
+PLAN_MAESTRO_ERP.md
+guia_keyvault_auth.md
